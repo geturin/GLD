@@ -1,8 +1,4 @@
-import {
-  enemyModeAfterDamage,
-  normalHitCount,
-  resolveHit,
-} from "./formulas";
+import { enemyModeAfterDamage, normalHitCount, resolveHit } from "./formulas";
 import type {
   BattleLogEntry,
   BattleState,
@@ -72,6 +68,18 @@ function applyPartyStatus(party: Combatant[], effects: StatusEffect[]) {
   }));
 }
 
+function applySelfStatus(party: Combatant[], actorId: string, effects: StatusEffect[]) {
+  if (effects.length === 0) {
+    return party;
+  }
+
+  return party.map((member) =>
+    member.id === actorId
+      ? { ...member, statusEffects: [...member.statusEffects, ...structuredClone(effects)] }
+      : member,
+  );
+}
+
 function resolveEnemySpecial(state: BattleState) {
   if (state.enemy.chargeDiamonds < state.enemy.maxChargeDiamonds || state.enemy.hp <= 0) {
     return state;
@@ -85,7 +93,12 @@ function resolveEnemySpecial(state: BattleState) {
     return state;
   }
 
-  const rawDamage = Math.round(state.enemy.attack * (state.enemy.mode === "overdrive" ? 1.7 : 1.25));
+  const attackDown = state.enemy.statusEffects.reduce(
+    (total, effect) => total + (effect.attackDown ?? 0),
+    0,
+  );
+  const effectiveAttack = state.enemy.attack * Math.max(0.1, 1 - attackDown);
+  const rawDamage = Math.round(effectiveAttack * (state.enemy.mode === "overdrive" ? 1.7 : 1.25));
   const nextParty = state.party.map((member) =>
     member.id === target.id
       ? {
@@ -124,7 +137,6 @@ function resolveCounters(state: BattleState) {
       attacker: member,
       enemy: current.enemy,
       weaponGrid: current.weaponGrid,
-      summons: current.summons,
       kind: "counter",
       hitMultiplier: 1.5,
       cap: NORMAL_ATTACK_CAP,
@@ -174,7 +186,6 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
         attacker: nextActor,
         enemy: nextState.enemy,
         weaponGrid: nextState.weaponGrid,
-        summons: nextState.summons,
         kind: "skill",
         hitMultiplier: skill.damageMultiplier ?? 1,
         cap: skill.damageCap ?? 630000,
@@ -196,14 +207,19 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
     );
   }
 
-  if (skill.kind === "buff") {
+  if (skill.kind === "buff" && skill.target === "party") {
     nextState.party = applyPartyStatus(nextState.party, skill.applies ?? []);
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Party gains layered buffs."));
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Party gains ATK Up."));
+  }
+
+  if (skill.kind === "buff" && skill.target === "self") {
+    nextState.party = applySelfStatus(nextState.party, actorId, skill.applies ?? []);
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Self gains unique ATK Up."));
   }
 
   if (skill.kind === "debuff") {
     nextState.enemy.statusEffects = [...nextState.enemy.statusEffects, ...structuredClone(skill.applies ?? [])];
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Enemy DEF is reduced."));
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Enemy ATK and DEF are reduced."));
   }
 
   if (skill.kind === "delay") {
@@ -227,20 +243,6 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
   };
 }
 
-export function callSupportSummon(state: BattleState) {
-  const call = state.summons.support.call;
-  if (!call) {
-    return state;
-  }
-
-  return {
-    ...state,
-    party: applyPartyStatus(state.party, [call]),
-    log: [...state.log, makeLog(state, state.summons.support.name, "Summon call", call.label)],
-    lastActionSummary: `${state.summons.support.name} call activated`,
-  };
-}
-
 export function attackTurn(state: BattleState): BattleState {
   if (state.enemy.hp <= 0) {
     return state;
@@ -259,7 +261,6 @@ export function attackTurn(state: BattleState): BattleState {
         attacker: member,
         enemy: nextState.enemy,
         weaponGrid: nextState.weaponGrid,
-        summons: nextState.summons,
         kind: "charge",
         hitMultiplier: member.chargeAttack.multiplier,
         cap: member.chargeAttack.cap,
@@ -286,7 +287,6 @@ export function attackTurn(state: BattleState): BattleState {
       attacker: member,
       enemy: nextState.enemy,
       weaponGrid: nextState.weaponGrid,
-      summons: nextState.summons,
       kind: "normal",
       hitMultiplier: 1,
       cap: NORMAL_ATTACK_CAP,

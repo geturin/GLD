@@ -316,7 +316,7 @@ h3 {
 
 .skill-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 10px;
   margin-top: 18px;
 }
@@ -327,9 +327,11 @@ h3 {
 }
 
 .skill-grid button {
+  align-items: flex-start;
   justify-content: space-between;
-  min-height: 54px;
+  min-height: 118px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
 }
 
 .skill-grid button:disabled {
@@ -337,9 +339,23 @@ h3 {
   opacity: 0.48;
 }
 
-.skill-grid small {
+.skill-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.skill-copy small {
+  color: #cbd6dc;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.skill-grid em {
   color: #f4d58b;
+  font-size: 0.78rem;
+  font-style: normal;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .battle-strip {

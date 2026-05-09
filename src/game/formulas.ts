@@ -86,8 +86,6 @@ export function baseDamage(context: DamageContext) {
   );
   const modifiers = sumModifiers([
     ...context.weaponGrid.modifiers,
-    ...context.summons.main.aura,
-    ...context.summons.support.aura,
     ...context.attacker.personalModifiers,
     ...statusModifiers,
     {
@@ -190,7 +188,6 @@ export function supplementalDamage(
 export function resolveHit(context: DamageContext, hitCount = 1): DamageBreakdown {
   const capUps = [
     ...context.weaponGrid.capUp,
-    ...context.summons.main.capUp,
     ...context.attacker.capUp,
     ...collectStatusCapUp(context.attacker.statusEffects),
   ];

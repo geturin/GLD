@@ -7,6 +7,7 @@ This workspace is for building a game whose core direction is:
 - DRPG means the project should combine those systems with dungeon RPG structure: dungeon exploration, party building, encounters, progression, and repeatable run/expedition loops.
 - The current development environment is a browser app: Vite + React + TypeScript for the UI/application shell, with PixiJS available for future 2D dungeon or battle rendering.
 - Battle logic should stay data-driven and modifier-based. Formula code lives under `src/game/`, with combat types, damage formulas, demo state, and the battle engine separated so future skills, weapon skills, summons, buffs, debuffs, EMPs, and enemy mechanics can add modifiers without rewriting the core formulas.
+- The current battle demo is intentionally scoped to one playable character and does not implement the summon system yet. Demo skill descriptions are generated from skill data variables, so changing cooldowns, durations, hit counts, caps, or modifier values should automatically update the UI text.
 - This is the central product identity of the project. Future Codex sessions should preserve this direction and avoid drifting into a generic RPG, idle game, or unrelated combat prototype.
 
 # GBF English Wiki System Reference Index

@@ -11,9 +11,10 @@ import {
   Swords,
   Zap,
 } from "lucide-react";
-import { attackTurn, callSupportSummon, executeSkill } from "./game/battleEngine";
+import { attackTurn, executeSkill } from "./game/battleEngine";
 import { createInitialBattleState } from "./game/demoState";
 import { elementMultiplier, resolveHit } from "./game/formulas";
+import { describeSkill } from "./game/skillText";
 import type { BattleState, Combatant } from "./game/types";
 
 const coveredSystems = [
@@ -26,7 +27,6 @@ const coveredSystems = [
   "Chain burst",
   "Charge bar",
   "Weapon grid",
-  "Summon aura / call",
   "Element matchup",
   "Buffs and debuffs",
   "Defense",
@@ -52,7 +52,6 @@ function expectedNormalDamage(state: BattleState, member: Combatant) {
     attacker: member,
     enemy: state.enemy,
     weaponGrid: state.weaponGrid,
-    summons: state.summons,
     kind: "normal",
     hitMultiplier: 1,
     cap: 440000,
@@ -77,7 +76,7 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">GBF-like battle demo</p>
+          <p className="eyebrow">Single-character GBF-like battle demo</p>
           <h1>GLD Combat Lab</h1>
         </div>
         <nav className="mode-tabs" aria-label="Game work modes">
@@ -163,10 +162,6 @@ export function App() {
               <Swords size={20} />
               Attack Turn
             </button>
-            <button onClick={() => setBattle(callSupportSummon)} type="button">
-              <Sparkles size={18} />
-              Summon Call
-            </button>
             <button onClick={() => setBattle(createInitialBattleState())} type="button">
               <RotateCcw size={18} />
               Reset
@@ -187,10 +182,11 @@ export function App() {
                 }
                 type="button"
               >
-                <span>{skill.label}</span>
-                <small>
-                  {skill.remainingCooldown > 0 ? `${skill.remainingCooldown}T` : skill.kind}
-                </small>
+                <span className="skill-copy">
+                  <strong>{skill.label}</strong>
+                  <small>{describeSkill(skill)}</small>
+                </span>
+                <em>{skill.remainingCooldown > 0 ? `${skill.remainingCooldown}T` : skill.kind}</em>
               </button>
             ))}
           </section>
@@ -228,7 +224,8 @@ export function App() {
           <div className="formula-card">
             <h3>Formula Stack</h3>
             <p>
-              ATK buckets, element, HP curves, crit, soft cap, echo, supplemental.
+              Character ATK, weapon grid, element, buffs, debuffs, unique bucket, crit,
+              soft cap, and skill hit count.
             </p>
           </div>
         </aside>

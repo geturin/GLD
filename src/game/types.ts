@@ -66,6 +66,7 @@ export interface StatusEffect {
   supplemental?: SupplementalRule[];
   multiattack?: Partial<MultiattackProfile>;
   defenseDown?: number;
+  attackDown?: number;
 }
 
 export interface SkillDefinition {
@@ -74,6 +75,7 @@ export interface SkillDefinition {
   cooldown: number;
   remainingCooldown: number;
   kind: "damage" | "buff" | "debuff" | "delay" | "dispel" | "substitute" | "counter";
+  target: "self" | "party" | "enemy";
   hitCount?: number;
   damageMultiplier?: number;
   damageCap?: number;
@@ -117,19 +119,6 @@ export interface WeaponGrid {
   supplemental: SupplementalRule[];
 }
 
-export interface SummonSetup {
-  main: {
-    name: string;
-    aura: ScalarModifier[];
-    capUp: DamageCapModifier[];
-  };
-  support: {
-    name: string;
-    aura: ScalarModifier[];
-    call?: StatusEffect;
-  };
-}
-
 export interface Enemy {
   id: string;
   name: string;
@@ -150,7 +139,6 @@ export interface BattleState {
   party: Combatant[];
   enemy: Enemy;
   weaponGrid: WeaponGrid;
-  summons: SummonSetup;
   log: BattleLogEntry[];
   chainCount: number;
   lastActionSummary: string;
@@ -169,7 +157,6 @@ export interface DamageContext {
   attacker: Combatant;
   enemy: Enemy;
   weaponGrid: WeaponGrid;
-  summons: SummonSetup;
   kind: AttackKind;
   hitMultiplier: number;
   cap: number;
