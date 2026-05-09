@@ -1,0 +1,36 @@
+{
+  "name": "gld",
+  "version": "1.0.0",
+  "description": "GLD is planned as a GBF-like + DRPG game.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geturin/GLD.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/geturin/GLD/issues"
+  },
+  "homepage": "https://github.com/geturin/GLD#readme",
+  "dependencies": {
+    "lucide-react": "^1.14.0",
+    "pixi.js": "^8.18.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.11"
+  }
+}
