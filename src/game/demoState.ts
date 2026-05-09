@@ -5,11 +5,58 @@ export const demoWeaponGrid: WeaponGrid = {
   attack: 22000,
   modifiers: [
     { id: "normal-atk", label: "Normal ATK", bucket: "normal", value: 0.25 },
+    { id: "omega-atk", label: "Omega ATK", bucket: "omega", value: 0 },
     { id: "ex-atk", label: "EX ATK", bucket: "ex", value: 0.18 },
+    { id: "stamina-atk", label: "Stamina", bucket: "stamina", value: 0 },
+    { id: "enmity-atk", label: "Enmity", bucket: "enmity", value: 0 },
+    { id: "skill-dmg", label: "Skill DMG", bucket: "skillDamage", value: 0 },
+    { id: "ca-dmg", label: "C.A. DMG", bucket: "caDamage", value: 0 },
+    { id: "amplified-dmg", label: "DMG Amplified", bucket: "amplified", value: 0 },
   ],
   critical: [{ id: "demo-crit", label: "Demo critical", chance: 0.25, damage: 0.5 }],
-  capUp: [],
-  supplemental: [],
+  capUp: [
+    {
+      id: "normal-cap-up",
+      label: "Normal DMG Cap",
+      source: "weapon",
+      appliesTo: ["normal", "counter"],
+      value: 0,
+    },
+    {
+      id: "skill-cap-up",
+      label: "Skill DMG Cap",
+      source: "weapon",
+      appliesTo: ["skill"],
+      value: 0,
+    },
+    {
+      id: "ca-cap-up",
+      label: "C.A. DMG Cap",
+      source: "weapon",
+      appliesTo: ["charge"],
+      value: 0,
+    },
+  ],
+  supplemental: [
+    {
+      id: "normal-supp",
+      label: "Normal Supplemental",
+      amount: 0,
+      appliesTo: ["normal", "counter"],
+    },
+    {
+      id: "skill-supp",
+      label: "Skill Supplemental",
+      amount: 0,
+      appliesTo: ["skill"],
+    },
+    {
+      id: "ca-supp",
+      label: "C.A. Supplemental",
+      amount: 0,
+      appliesTo: ["charge"],
+    },
+  ],
 };
 
 export const DEMO_SKILL_VALUES = {
@@ -133,9 +180,12 @@ export const demoParty: Combatant[] = [
       fixedDamage: 2000,
     },
     skills: demoSkills,
-    personalModifiers: [],
+    personalModifiers: [
+      { id: "unique-passive", label: "Unique Passive", bucket: "unique", value: 0 },
+      { id: "seraphic-passive", label: "Seraphic", bucket: "seraphic", value: 0 },
+    ],
     critical: [],
-    bonusDamage: [],
+    bonusDamage: [{ id: "normal-echo", label: "Bonus DMG", multiplier: 0 }],
     supplemental: [],
     capUp: [],
     statusEffects: [],

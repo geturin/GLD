@@ -121,7 +121,7 @@ h3 {
 
 .combat-layout {
   display: grid;
-  grid-template-columns: minmax(230px, 300px) minmax(420px, 1fr) minmax(250px, 330px);
+  grid-template-columns: minmax(300px, 380px) minmax(420px, 1fr) minmax(250px, 330px);
   gap: 16px;
   max-width: 1540px;
   margin: 0 auto;
@@ -235,15 +235,36 @@ h3 {
 .stat-dashboard {
   display: grid;
   gap: 12px;
+  max-height: 74vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.tuning-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.tuning-group h3 {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  color: #f4d58b;
+  font-size: 0.86rem;
 }
 
 .number-control,
 .range-control {
   display: grid;
   gap: 7px;
-  padding: 10px;
+  min-width: 0;
+  padding: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -253,8 +274,13 @@ h3 {
   justify-content: space-between;
   gap: 10px;
   color: #cbd6dc;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 700;
+}
+
+.number-control span,
+.range-control span {
+  flex-wrap: wrap;
 }
 
 .range-control strong {
@@ -535,5 +561,9 @@ h3 {
   .battle-strip {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .tuning-group {
+    grid-template-columns: 1fr;
   }
 }

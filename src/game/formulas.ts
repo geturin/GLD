@@ -50,12 +50,17 @@ export function sumModifiers(modifiers: ScalarModifier[]) {
   );
 }
 
-export function hpCurveModifiers(attacker: Combatant) {
-  const hpRatio = Math.max(0, Math.min(1, attacker.hp / attacker.maxHp));
-  return {
-    stamina: 1 + Math.max(0, hpRatio - 0.25) * 0.36,
-    enmity: 1 + Math.max(0, 1 - hpRatio) ** 1.7 * 0.72,
-  };
+export function staminaStrength(maxStrength: number, hpRatio: number) {
+  if (hpRatio < 0.25) {
+    return 0;
+  }
+
+  return maxStrength * ((hpRatio - 0.25) / 0.75) ** 2.9;
+}
+
+export function enmityStrength(maxStrength: number, hpRatio: number) {
+  const missingHpRatio = 1 - hpRatio;
+  return maxStrength * ((1 + 2 * missingHpRatio) * missingHpRatio);
 }
 
 export function baseDamage(context: DamageContext) {
@@ -76,7 +81,6 @@ export function baseDamage(context: DamageContext) {
     },
   ]);
 
-  const hpCurves = hpCurveModifiers(context.attacker);
   const hpRatio = Math.max(0, Math.min(1, context.attacker.hp / context.attacker.maxHp));
   const attack =
     context.attacker.baseAttack + context.weaponGrid.attack + context.enemy.defense * 24;
@@ -102,10 +106,8 @@ export function baseDamage(context: DamageContext) {
       ex *
       advantage *
       unique *
-      hpCurves.stamina *
-      (1 + modifiers.stamina * hpRatio) *
-      hpCurves.enmity *
-      (1 + modifiers.enmity * (1 - hpRatio))) /
+      (1 + staminaStrength(modifiers.stamina, hpRatio)) *
+      (1 + enmityStrength(modifiers.enmity, hpRatio))) /
     effectiveDefense *
     context.hitMultiplier *
     seraphic *
