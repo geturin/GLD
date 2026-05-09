@@ -59,6 +59,15 @@ function expectedNormalDamage(state: BattleState, member: Combatant) {
   });
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function readNumber(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function App() {
   const [battle, setBattle] = useState(createInitialBattleState);
   const [selectedMemberId, setSelectedMemberId] = useState(battle.party[0].id);
@@ -71,6 +80,58 @@ export function App() {
   );
   const enemyHpRate = hpPercent(battle.enemy.hp, battle.enemy.maxHp);
   const elementRate = elementMultiplier(selectedMember.element, battle.enemy.element);
+
+  function updateSelectedMember(updater: (member: Combatant) => Combatant) {
+    setBattle((current) => ({
+      ...current,
+      party: current.party.map((member) =>
+        member.id === selectedMember.id ? updater(member) : member,
+      ),
+      lastActionSummary: `${selectedMember.name} stats adjusted`,
+    }));
+  }
+
+  function setSelectedBaseAttack(value: number) {
+    updateSelectedMember((member) => ({
+      ...member,
+      baseAttack: clamp(Math.round(value), 1, 999999),
+    }));
+  }
+
+  function setSelectedMaxHp(value: number) {
+    updateSelectedMember((member) => {
+      const maxHp = clamp(Math.round(value), 1, 999999);
+      return {
+        ...member,
+        maxHp,
+        hp: clamp(member.hp, 0, maxHp),
+      };
+    });
+  }
+
+  function setSelectedHp(value: number) {
+    updateSelectedMember((member) => ({
+      ...member,
+      hp: clamp(Math.round(value), 0, member.maxHp),
+    }));
+  }
+
+  function setSelectedChargeBar(value: number) {
+    updateSelectedMember((member) => ({
+      ...member,
+      chargeBar: clamp(Math.round(value), 0, 100),
+    }));
+  }
+
+  function setSelectedMultiattack(kind: "double" | "triple", value: number) {
+    updateSelectedMember((member) => ({
+      ...member,
+      multiattack: {
+        ...member.multiattack,
+        [kind]: clamp(value / 100, 0, 1),
+      },
+    }));
+  }
 
   return (
     <main className="app-shell">
@@ -124,6 +185,95 @@ export function App() {
               </button>
             ))}
           </div>
+
+          <section className="stat-dashboard" aria-label={`${selectedMember.name} base stat dashboard`}>
+            <div className="section-title compact-title">
+              <Activity size={18} />
+              <h2>Base Stats</h2>
+            </div>
+
+            <label className="number-control">
+              <span>Base ATK</span>
+              <input
+                min="1"
+                onChange={(event) => setSelectedBaseAttack(readNumber(event.target.value))}
+                step="100"
+                type="number"
+                value={selectedMember.baseAttack}
+              />
+            </label>
+
+            <label className="number-control">
+              <span>Max HP</span>
+              <input
+                min="1"
+                onChange={(event) => setSelectedMaxHp(readNumber(event.target.value))}
+                step="100"
+                type="number"
+                value={selectedMember.maxHp}
+              />
+            </label>
+
+            <label className="range-control">
+              <span>
+                Current HP <strong>{formatNumber(selectedMember.hp)}</strong>
+              </span>
+              <input
+                max={selectedMember.maxHp}
+                min="0"
+                onChange={(event) => setSelectedHp(readNumber(event.target.value))}
+                step="100"
+                type="range"
+                value={selectedMember.hp}
+              />
+            </label>
+
+            <label className="range-control">
+              <span>
+                Charge Bar <strong>{selectedMember.chargeBar}%</strong>
+              </span>
+              <input
+                max="100"
+                min="0"
+                onChange={(event) => setSelectedChargeBar(readNumber(event.target.value))}
+                step="5"
+                type="range"
+                value={selectedMember.chargeBar}
+              />
+            </label>
+
+            <label className="range-control">
+              <span>
+                Double Attack <strong>{Math.round(selectedMember.multiattack.double * 100)}%</strong>
+              </span>
+              <input
+                max="100"
+                min="0"
+                onChange={(event) =>
+                  setSelectedMultiattack("double", readNumber(event.target.value))
+                }
+                step="1"
+                type="range"
+                value={Math.round(selectedMember.multiattack.double * 100)}
+              />
+            </label>
+
+            <label className="range-control">
+              <span>
+                Triple Attack <strong>{Math.round(selectedMember.multiattack.triple * 100)}%</strong>
+              </span>
+              <input
+                max="100"
+                min="0"
+                onChange={(event) =>
+                  setSelectedMultiattack("triple", readNumber(event.target.value))
+                }
+                step="1"
+                type="range"
+                value={Math.round(selectedMember.multiattack.triple * 100)}
+              />
+            </label>
+          </section>
         </aside>
 
         <section className="battle-stage" aria-label="Battle stage">
