@@ -17,28 +17,7 @@ import { createInitialBattleState } from "./game/demoState";
 import { DEFAULT_ADVANTAGE_MULTIPLIER, resolveHit } from "./game/formulas";
 import { describeSkill } from "./game/skillText";
 import type { AttackKind, BattleState, Combatant, ModifierBucket } from "./game/types";
-
-const coveredSystems = [
-  "Damage formula",
-  "Damage cap / cap up",
-  "Multiattack",
-  "Critical",
-  "Bonus and supplemental damage",
-  "Charge attack",
-  "Chain burst",
-  "Charge bar",
-  "Weapon grid",
-  "Default advantage matchup",
-  "Buffs and debuffs",
-  "Defense",
-  "Overdrive / break",
-  "Turn and action order",
-  "Class / character passives",
-  "Stamina / enmity hooks",
-  "Skill damage",
-  "Counters / substitute",
-  "Dispel / delay hooks",
-];
+import { t } from "./i18n/zhCN";
 
 function formatNumber(value: number) {
   return Math.round(value).toLocaleString();
@@ -170,7 +149,7 @@ export function App() {
       party: current.party.map((member) =>
         member.id === selectedMember.id ? updater(member) : member,
       ),
-      lastActionSummary: `${selectedMember.name} stats adjusted`,
+      lastActionSummary: `${selectedMember.name}${t.battle.statsAdjusted}`,
     }));
   }
 
@@ -225,7 +204,7 @@ export function App() {
           modifier.id === id ? { ...modifier, bucket, value: value / 100 } : modifier,
         ),
       },
-      lastActionSummary: "Weapon skill values adjusted",
+      lastActionSummary: t.battle.weaponSkillAdjusted,
     }));
   }
 
@@ -247,7 +226,7 @@ export function App() {
           cap.id === id ? { ...cap, appliesTo, value: value / 100 } : cap,
         ),
       },
-      lastActionSummary: "Damage cap values adjusted",
+      lastActionSummary: t.battle.capAdjusted,
     }));
   }
 
@@ -260,7 +239,7 @@ export function App() {
           rule.id === id ? { ...rule, appliesTo, amount: Math.round(value) } : rule,
         ),
       },
-      lastActionSummary: "Supplemental damage adjusted",
+      lastActionSummary: t.battle.supplementalAdjusted,
     }));
   }
 
@@ -273,7 +252,7 @@ export function App() {
           rule.id === "demo-crit" ? { ...rule, [field]: value / 100 } : rule,
         ),
       },
-      lastActionSummary: "Critical values adjusted",
+      lastActionSummary: t.battle.criticalAdjusted,
     }));
   }
 
@@ -303,30 +282,30 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">Single-character GBF-like battle demo</p>
-          <h1>GLD Combat Lab</h1>
+          <p className="eyebrow">{t.app.eyebrow}</p>
+          <h1>{t.app.title}</h1>
         </div>
-        <nav className="mode-tabs" aria-label="Game work modes">
+        <nav className="mode-tabs" aria-label="游戏模式">
           <button type="button">
             <Map size={18} />
-            Dungeon
+            {t.nav.dungeon}
           </button>
           <button className="active" type="button">
             <Swords size={18} />
-            Battle
+            {t.nav.battle}
           </button>
           <button type="button">
             <Gem size={18} />
-            Grid
+            {t.nav.grid}
           </button>
         </nav>
       </header>
 
-      <section className="combat-layout" aria-label="GBF-like combat prototype">
+      <section className="combat-layout" aria-label="GBF-like 战斗原型">
         <aside className="panel party-panel">
           <div className="panel-heading">
             <Shield size={18} />
-            <h2>Party</h2>
+            <h2>{t.panels.party}</h2>
           </div>
           <div className="party-list">
             {battle.party.map((member) => (
@@ -345,73 +324,73 @@ export function App() {
                   <i style={{ width: hpPercent(member.hp, member.maxHp) }} />
                 </span>
                 <span className="stat-row">
-                  <small>HP {formatNumber(member.hp)}</small>
-                  <small>Advantage</small>
+                  <small>{t.battle.hp} {formatNumber(member.hp)}</small>
+                  <small>{t.battle.advantage}</small>
                 </span>
               </button>
             ))}
           </div>
 
-          <section className="stat-dashboard" aria-label={`${selectedMember.name} tuning dashboard`}>
+          <section className="stat-dashboard" aria-label={`${selectedMember.name}${t.panels.damageLab}`}>
             <div className="section-title compact-title">
               <Activity size={18} />
-              <h2>Damage Lab</h2>
+              <h2>{t.panels.damageLab}</h2>
             </div>
 
-            <FieldGroup title="Base">
-              <NumberControl label="Character ATK" min={1} onChange={setSelectedBaseAttack} step={100} value={selectedMember.baseAttack} />
-              <NumberControl label="Grid ATK" min={0} onChange={(value) => setBattle((current) => ({
+            <FieldGroup title={t.groups.base}>
+              <NumberControl label={t.controls.characterAttack} min={1} onChange={setSelectedBaseAttack} step={100} value={selectedMember.baseAttack} />
+              <NumberControl label={t.controls.gridAttack} min={0} onChange={(value) => setBattle((current) => ({
                 ...current,
                 weaponGrid: { ...current.weaponGrid, attack: clamp(Math.round(value), 0, 999999) },
-                lastActionSummary: "Grid ATK adjusted",
+                lastActionSummary: t.battle.gridAttackAdjusted,
               }))} step={100} value={battle.weaponGrid.attack} />
-              <NumberControl label="Max HP" min={1} onChange={setSelectedMaxHp} step={100} value={selectedMember.maxHp} />
-              <RangeControl label="Current HP" max={selectedMember.maxHp} onChange={setSelectedHp} step={100} suffix="" value={selectedMember.hp} />
-              <RangeControl label="Charge Bar" max={100} onChange={setSelectedChargeBar} step={5} value={selectedMember.chargeBar} />
-              <RangeControl label="Double Attack" max={100} onChange={(value) => setSelectedMultiattack("double", value)} value={Math.round(selectedMember.multiattack.double * 100)} />
-              <RangeControl label="Triple Attack" max={100} onChange={(value) => setSelectedMultiattack("triple", value)} value={Math.round(selectedMember.multiattack.triple * 100)} />
+              <NumberControl label={t.controls.maxHp} min={1} onChange={setSelectedMaxHp} step={100} value={selectedMember.maxHp} />
+              <RangeControl label={t.controls.currentHp} max={selectedMember.maxHp} onChange={setSelectedHp} step={100} suffix="" value={selectedMember.hp} />
+              <RangeControl label={t.controls.chargeBar} max={100} onChange={setSelectedChargeBar} step={5} value={selectedMember.chargeBar} />
+              <RangeControl label={t.controls.doubleAttack} max={100} onChange={(value) => setSelectedMultiattack("double", value)} value={Math.round(selectedMember.multiattack.double * 100)} />
+              <RangeControl label={t.controls.tripleAttack} max={100} onChange={(value) => setSelectedMultiattack("triple", value)} value={Math.round(selectedMember.multiattack.triple * 100)} />
             </FieldGroup>
 
-            <FieldGroup title="Attack Buckets">
-              <RangeControl label="Normal ATK" max={500} onChange={(value) => updateGridModifier("normal-atk", "normal", value)} value={gridModifier("normal-atk")} />
-              <RangeControl label="Omega ATK" max={500} onChange={(value) => updateGridModifier("omega-atk", "omega", value)} value={gridModifier("omega-atk")} />
-              <RangeControl label="EX ATK" max={300} onChange={(value) => updateGridModifier("ex-atk", "ex", value)} value={gridModifier("ex-atk")} />
-              <RangeControl label="Unique ATK" max={200} onChange={(value) => updatePersonalModifier("unique-passive", "unique", value)} value={personalModifier("unique-passive")} />
-              <RangeControl label="Seraphic" max={30} onChange={(value) => updatePersonalModifier("seraphic-passive", "seraphic", value)} value={personalModifier("seraphic-passive")} />
-              <RangeControl label="DMG Amplified" max={50} onChange={(value) => updateGridModifier("amplified-dmg", "amplified", value)} value={gridModifier("amplified-dmg")} />
+            <FieldGroup title={t.groups.attackBuckets}>
+              <RangeControl label={t.controls.normalAttack} max={500} onChange={(value) => updateGridModifier("normal-atk", "normal", value)} value={gridModifier("normal-atk")} />
+              <RangeControl label={t.controls.omegaAttack} max={500} onChange={(value) => updateGridModifier("omega-atk", "omega", value)} value={gridModifier("omega-atk")} />
+              <RangeControl label={t.controls.exAttack} max={300} onChange={(value) => updateGridModifier("ex-atk", "ex", value)} value={gridModifier("ex-atk")} />
+              <RangeControl label={t.controls.uniqueAttack} max={200} onChange={(value) => updatePersonalModifier("unique-passive", "unique", value)} value={personalModifier("unique-passive")} />
+              <RangeControl label={t.controls.seraphic} max={30} onChange={(value) => updatePersonalModifier("seraphic-passive", "seraphic", value)} value={personalModifier("seraphic-passive")} />
+              <RangeControl label={t.controls.damageAmplified} max={50} onChange={(value) => updateGridModifier("amplified-dmg", "amplified", value)} value={gridModifier("amplified-dmg")} />
             </FieldGroup>
 
-            <FieldGroup title="HP Conditional">
-              <RangeControl label="Stamina at full HP" max={100} onChange={(value) => updateGridModifier("stamina-atk", "stamina", value)} value={gridModifier("stamina-atk")} />
-              <RangeControl label="Enmity strength" max={100} onChange={(value) => updateGridModifier("enmity-atk", "enmity", value)} value={gridModifier("enmity-atk")} />
+            <FieldGroup title={t.groups.hpConditional}>
+              <RangeControl label={t.controls.stamina} max={100} onChange={(value) => updateGridModifier("stamina-atk", "stamina", value)} value={gridModifier("stamina-atk")} />
+              <RangeControl label={t.controls.enmity} max={100} onChange={(value) => updateGridModifier("enmity-atk", "enmity", value)} value={gridModifier("enmity-atk")} />
             </FieldGroup>
 
-            <FieldGroup title="Damage Type">
-              <RangeControl label="Skill DMG" max={300} onChange={(value) => updateGridModifier("skill-dmg", "skillDamage", value)} value={gridModifier("skill-dmg")} />
-              <RangeControl label="C.A. DMG" max={300} onChange={(value) => updateGridModifier("ca-dmg", "caDamage", value)} value={gridModifier("ca-dmg")} />
-              <RangeControl label="Bonus DMG" max={100} onChange={updateBonusDamage} value={bonusDamage} />
+            <FieldGroup title={t.groups.damageType}>
+              <RangeControl label={t.controls.skillDamage} max={300} onChange={(value) => updateGridModifier("skill-dmg", "skillDamage", value)} value={gridModifier("skill-dmg")} />
+              <RangeControl label={t.controls.chargeAttackDamage} max={300} onChange={(value) => updateGridModifier("ca-dmg", "caDamage", value)} value={gridModifier("ca-dmg")} />
+              <RangeControl label={t.controls.bonusDamage} max={100} onChange={updateBonusDamage} value={bonusDamage} />
             </FieldGroup>
 
-            <FieldGroup title="Damage Cap">
-              <RangeControl label="Normal Cap" max={20} onChange={(value) => updateWeaponCap("normal-cap-up", ["normal", "counter"], value)} value={capModifier("normal-cap-up")} />
-              <RangeControl label="Skill Cap" max={20} onChange={(value) => updateWeaponCap("skill-cap-up", ["skill"], value)} value={capModifier("skill-cap-up")} />
-              <RangeControl label="C.A. Cap" max={20} onChange={(value) => updateWeaponCap("ca-cap-up", ["charge"], value)} value={capModifier("ca-cap-up")} />
+            <FieldGroup title={t.groups.damageCap}>
+              <RangeControl label={t.controls.normalCap} max={20} onChange={(value) => updateWeaponCap("normal-cap-up", ["normal", "counter"], value)} value={capModifier("normal-cap-up")} />
+              <RangeControl label={t.controls.skillCap} max={20} onChange={(value) => updateWeaponCap("skill-cap-up", ["skill"], value)} value={capModifier("skill-cap-up")} />
+              <RangeControl label={t.controls.chargeAttackCap} max={20} onChange={(value) => updateWeaponCap("ca-cap-up", ["charge"], value)} value={capModifier("ca-cap-up")} />
             </FieldGroup>
 
-            <FieldGroup title="Critical / Supplemental">
-              <RangeControl label="Crit Rate" max={100} onChange={(value) => updateCritical("chance", value)} value={percentValue(critical?.chance ?? 0)} />
-              <RangeControl label="Crit DMG" max={200} onChange={(value) => updateCritical("damage", value)} value={percentValue(critical?.damage ?? 0)} />
-              <NumberControl label="Normal Supplemental" min={0} onChange={(value) => updateSupplemental("normal-supp", ["normal", "counter"], value)} step={10000} value={supplemental("normal-supp")} />
-              <NumberControl label="Skill Supplemental" min={0} onChange={(value) => updateSupplemental("skill-supp", ["skill"], value)} step={10000} value={supplemental("skill-supp")} />
-              <NumberControl label="C.A. Supplemental" min={0} onChange={(value) => updateSupplemental("ca-supp", ["charge"], value)} step={10000} value={supplemental("ca-supp")} />
+            <FieldGroup title={t.groups.criticalSupplemental}>
+              <RangeControl label={t.controls.criticalRate} max={100} onChange={(value) => updateCritical("chance", value)} value={percentValue(critical?.chance ?? 0)} />
+              <RangeControl label={t.controls.criticalDamage} max={200} onChange={(value) => updateCritical("damage", value)} value={percentValue(critical?.damage ?? 0)} />
+              <NumberControl label={t.controls.normalSupplemental} min={0} onChange={(value) => updateSupplemental("normal-supp", ["normal", "counter"], value)} step={10000} value={supplemental("normal-supp")} />
+              <NumberControl label={t.controls.skillSupplemental} min={0} onChange={(value) => updateSupplemental("skill-supp", ["skill"], value)} step={10000} value={supplemental("skill-supp")} />
+              <NumberControl label={t.controls.chargeAttackSupplemental} min={0} onChange={(value) => updateSupplemental("ca-supp", ["charge"], value)} step={10000} value={supplemental("ca-supp")} />
             </FieldGroup>
           </section>
         </aside>
 
-        <section className="battle-stage" aria-label="Battle stage">
+        <section className="battle-stage" aria-label="战斗舞台">
           <div className="stage-header">
             <div>
-              <p className="eyebrow">Turn {battle.turn}</p>
+              <p className="eyebrow">{t.battle.turn} {battle.turn}</p>
               <h2>{battle.enemy.name}</h2>
             </div>
             <div className={`mode-badge ${battle.enemy.mode}`}>
@@ -420,7 +399,7 @@ export function App() {
             </div>
           </div>
 
-          <section className="enemy-board" aria-label="Enemy state">
+          <section className="enemy-board" aria-label="敌人状态">
             <div className="enemy-core">
               <div className="enemy-sigil">
                 <Flame size={54} />
@@ -428,32 +407,32 @@ export function App() {
               <div>
                 <h3>{battle.enemy.name}</h3>
                 <p>
-                  Foe / DEF {battle.enemy.defense} / charge {battle.enemy.chargeDiamonds}/
+                  {t.battle.foe} / {t.battle.defense} {battle.enemy.defense} / {t.battle.chargeDiamond} {battle.enemy.chargeDiamonds}/
                   {battle.enemy.maxChargeDiamonds}
                 </p>
               </div>
             </div>
             <div className="large-hp">
-              <span>{formatNumber(battle.enemy.hp)} HP</span>
+              <span>{formatNumber(battle.enemy.hp)} {t.battle.hp}</span>
               <i style={{ width: enemyHpRate }} />
             </div>
           </section>
 
-          <section className="command-deck" aria-label="Battle commands">
+          <section className="command-deck" aria-label="战斗指令">
             <button className="primary-command" onClick={() => setBattle(attackTurn)} type="button">
               <Swords size={20} />
-              Attack Turn
+              {t.commands.attackTurn}
             </button>
             <button onClick={() => setBattle(createInitialBattleState())} type="button">
               <RotateCcw size={18} />
-              Reset
+              {t.commands.reset}
             </button>
           </section>
 
-          <section className="skill-grid" aria-label={`${selectedMember.name} skills`}>
+          <section className="skill-grid" aria-label={`${selectedMember.name}${t.panels.skills}`}>
             <div className="section-title">
               <Zap size={18} />
-              <h2>{selectedMember.name} Skills</h2>
+              <h2>{selectedMember.name}{t.panels.skills}</h2>
             </div>
             {selectedMember.skills.map((skill) => (
               <button
@@ -473,30 +452,30 @@ export function App() {
             ))}
           </section>
 
-          <section className="battle-strip" aria-label="Damage preview">
+          <section className="battle-strip" aria-label="伤害预览">
             <div>
               <Axe size={18} />
-              Base {formatNumber(selectedPreview.baseDamage)}
+              {t.preview.base} {formatNumber(selectedPreview.baseDamage)}
             </div>
             <div>
               <Flame size={18} />
-              Advantage x{DEFAULT_ADVANTAGE_MULTIPLIER}
+              {t.preview.advantage} x{DEFAULT_ADVANTAGE_MULTIPLIER}
             </div>
             <div>
               <Sparkles size={18} />
-              Cap {formatNumber(selectedPreview.cap)}
+              {t.preview.cap} {formatNumber(selectedPreview.cap)}
             </div>
             <div>
               <Zap size={18} />
-              Hit {formatNumber(selectedPreview.finalDamage)}
+              {t.preview.hit} {formatNumber(selectedPreview.finalDamage)}
             </div>
             <div>
               <Sparkles size={18} />
-              Crit x{selectedPreview.criticalMultiplier}
+              {t.preview.crit} x{selectedPreview.criticalMultiplier}
             </div>
             <div>
               <Axe size={18} />
-              Supp {formatNumber(selectedPreview.supplementalDamage)}
+              {t.preview.supplemental} {formatNumber(selectedPreview.supplementalDamage)}
             </div>
           </section>
         </section>
@@ -504,24 +483,21 @@ export function App() {
         <aside className="panel systems-panel">
           <div className="panel-heading">
             <Sparkles size={18} />
-            <h2>Systems</h2>
+            <h2>{t.panels.systems}</h2>
           </div>
           <ul className="system-list compact">
-            {coveredSystems.map((system) => (
+            {t.systems.map((system) => (
               <li key={system}>{system}</li>
             ))}
           </ul>
           <div className="formula-card">
-            <h3>Formula Stack</h3>
-            <p>
-              Character ATK, weapon grid, default advantage, buffs, debuffs, unique bucket,
-              crit, soft cap, and skill hit count.
-            </p>
+            <h3>{t.formula.title}</h3>
+            <p>{t.formula.description}</p>
           </div>
         </aside>
       </section>
 
-      <section className="log-dock" aria-label="Battle log">
+      <section className="log-dock" aria-label={t.panels.battleLog}>
         <div className="section-title">
           <Activity size={18} />
           <h2>{battle.lastActionSummary}</h2>
@@ -533,7 +509,7 @@ export function App() {
             .slice(0, 10)
             .map((entry) => (
               <li key={entry.id}>
-                <span>T{entry.turn}</span>
+                <span>{t.battle.turn}{entry.turn}</span>
                 <strong>{entry.actor}</strong>
                 <em>{entry.action}</em>
                 <p>{entry.detail}</p>

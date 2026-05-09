@@ -6,6 +6,8 @@ The project should combine Granblue Fantasy-inspired combat and progression syst
 
 GLD intentionally does not use element identities or selectable element matchups. Battles default to an advantageous matchup baseline so the game can focus on grid, skill, buff/debuff, cap, and dungeon progression decisions.
 
+The current base language is Simplified Chinese. UI strings are centralized under `src/i18n/` so future language versions can be added without rewriting components or combat logic.
+
 ## Development
 
 This project uses Vite, React, and TypeScript for the web game shell. PixiJS is included for future 2D dungeon and battle rendering.

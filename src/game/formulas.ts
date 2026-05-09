@@ -11,6 +11,7 @@ import type {
   StatusEffect,
   SupplementalRule,
 } from "./types";
+import { t } from "../i18n/zhCN";
 
 export const DEFAULT_ADVANTAGE_MULTIPLIER = 1.5;
 
@@ -75,7 +76,7 @@ export function baseDamage(context: DamageContext) {
     ...statusModifiers,
     {
       id: "default-advantage",
-      label: "Default advantage",
+      label: t.demo.labels.defaultAdvantage,
       bucket: "advantage",
       value: DEFAULT_ADVANTAGE_MULTIPLIER - 1,
     },
@@ -200,8 +201,10 @@ export function resolveHit(context: DamageContext, hitCount = 1): DamageBreakdow
     cap: Math.round(cap),
     hitCount,
     notes: [
-      `cap ${Math.round(cap).toLocaleString()}`,
-      crit > 1 ? `critical x${crit.toFixed(2)}` : "no critical",
+      t.battle.capNote.replace("{value}", Math.round(cap).toLocaleString()),
+      crit > 1
+        ? t.battle.critical.replace("{value}", crit.toFixed(2))
+        : t.battle.noCritical,
     ],
   };
 }

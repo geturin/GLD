@@ -1,4 +1,5 @@
 import type { SkillDefinition } from "./types";
+import { t } from "../i18n/zhCN";
 
 function percent(value: number) {
   return `${Math.round(value * 100)}%`;
@@ -6,6 +7,10 @@ function percent(value: number) {
 
 function turns(value: number) {
   return `${value}T`;
+}
+
+function format(template: string, values: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
 }
 
 function firstEffect(skill: SkillDefinition) {
@@ -16,40 +21,42 @@ export function describeSkill(skill: SkillDefinition) {
   const effect = firstEffect(skill);
 
   if (skill.kind === "damage") {
-    return [
-      `${skill.hitCount ?? 1}-hit ${percent(skill.damageMultiplier ?? 1)} skill damage to one foe.`,
-      `Damage cap: ~${(skill.damageCap ?? 0).toLocaleString()} per hit.`,
-      `Cooldown: ${turns(skill.cooldown)}.`,
-    ].join(" ");
+    return format(t.skillText.damage, {
+      cap: (skill.damageCap ?? 0).toLocaleString(),
+      cooldown: turns(skill.cooldown),
+      hits: skill.hitCount ?? 1,
+      multiplier: percent(skill.damageMultiplier ?? 1),
+    });
   }
 
   if (skill.kind === "buff" && skill.target === "party") {
     const attackUp =
       effect?.modifiers?.find((modifier) => modifier.bucket === "normal")?.value ?? 0;
-    return [
-      `All allies gain ${percent(attackUp)} ATK Up.`,
-      `Duration: ${turns(effect?.duration ?? 0)}.`,
-      `Cooldown: ${turns(skill.cooldown)}.`,
-    ].join(" ");
+    return format(t.skillText.partyBuff, {
+      attackUp: percent(attackUp),
+      cooldown: turns(skill.cooldown),
+      duration: turns(effect?.duration ?? 0),
+    });
   }
 
   if (skill.kind === "buff" && skill.target === "self") {
     const uniqueUp =
       effect?.modifiers?.find((modifier) => modifier.bucket === "unique")?.value ?? 0;
-    return [
-      `Caster gains ${percent(uniqueUp)} Unique ATK Up in the independent damage bucket.`,
-      `Duration: ${turns(effect?.duration ?? 0)}.`,
-      `Cooldown: ${turns(skill.cooldown)}.`,
-    ].join(" ");
+    return format(t.skillText.selfUnique, {
+      cooldown: turns(skill.cooldown),
+      duration: turns(effect?.duration ?? 0),
+      uniqueUp: percent(uniqueUp),
+    });
   }
 
   if (skill.kind === "debuff") {
-    return [
-      `Inflict ${percent(effect?.attackDown ?? 0)} ATK Down and ${percent(effect?.defenseDown ?? 0)} DEF Down on one foe.`,
-      `Duration: ${turns(effect?.duration ?? 0)}.`,
-      `Cooldown: ${turns(skill.cooldown)}.`,
-    ].join(" ");
+    return format(t.skillText.debuff, {
+      attackDown: percent(effect?.attackDown ?? 0),
+      cooldown: turns(skill.cooldown),
+      defenseDown: percent(effect?.defenseDown ?? 0),
+      duration: turns(effect?.duration ?? 0),
+    });
   }
 
-  return `Cooldown: ${turns(skill.cooldown)}.`;
+  return format(t.skillText.fallback, { cooldown: turns(skill.cooldown) });
 }

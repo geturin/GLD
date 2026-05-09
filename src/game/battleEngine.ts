@@ -1,4 +1,5 @@
 import { enemyModeAfterDamage, normalHitCount, resolveHit } from "./formulas";
+import { t } from "../i18n/zhCN";
 import type {
   BattleLogEntry,
   BattleState,
@@ -10,6 +11,10 @@ import type {
 
 const NORMAL_ATTACK_CAP = 440_000;
 const CHAIN_BURST_CAP = 1_680_000;
+
+function format(template: string, values: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
+}
 
 function makeLog(
   state: BattleState,
@@ -118,8 +123,11 @@ function resolveEnemySpecial(state: BattleState) {
       makeLog(
         state,
         state.enemy.name,
-        state.enemy.mode === "overdrive" ? "Overdrive trigger" : "Special attack",
-        `${target.name} takes ${rawDamage.toLocaleString()} damage.`,
+        state.enemy.mode === "overdrive" ? t.battle.overdriveTrigger : t.battle.specialAttack,
+        format(t.battle.takesDamage, {
+          damage: rawDamage.toLocaleString(),
+          target: target.name,
+        }),
         rawDamage,
       ),
     ],
@@ -156,8 +164,11 @@ function resolveCounters(state: BattleState) {
         makeLog(
           current,
           member.name,
-          "Counter",
-          `${breakdown.hitCount} hit for ${breakdown.finalDamage.toLocaleString()} damage.`,
+          t.battle.counter,
+          format(t.battle.counterDetail, {
+            damage: breakdown.finalDamage.toLocaleString(),
+            hits: breakdown.hitCount,
+          }),
           breakdown.finalDamage,
         ),
       ],
@@ -201,7 +212,10 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
         nextState,
         nextActor.name,
         skill.label,
-        `${hitCount} skill hits for ${totalDamage.toLocaleString()} damage.`,
+        format(t.battle.skillDamageDetail, {
+          damage: totalDamage.toLocaleString(),
+          hits: hitCount,
+        }),
         totalDamage,
       ),
     );
@@ -209,22 +223,22 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
 
   if (skill.kind === "buff" && skill.target === "party") {
     nextState.party = applyPartyStatus(nextState.party, skill.applies ?? []);
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Party gains ATK Up."));
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.partyBuffApplied));
   }
 
   if (skill.kind === "buff" && skill.target === "self") {
     nextState.party = applySelfStatus(nextState.party, actorId, skill.applies ?? []);
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Self gains unique ATK Up."));
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.selfBuffApplied));
   }
 
   if (skill.kind === "debuff") {
     nextState.enemy.statusEffects = [...nextState.enemy.statusEffects, ...structuredClone(skill.applies ?? [])];
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Enemy ATK and DEF are reduced."));
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.enemyDebuffed));
   }
 
   if (skill.kind === "delay") {
     nextState.enemy.chargeDiamonds = Math.max(0, nextState.enemy.chargeDiamonds - 1);
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Enemy charge diamond delayed."));
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.enemyDelayed));
   }
 
   if (skill.kind === "substitute") {
@@ -234,7 +248,7 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
       counterStacks: 0,
       statusEffects: [...nextState.party[actorIndex].statusEffects, ...structuredClone(skill.applies ?? [])],
     };
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, "Will cover allies and counter."));
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.substituteCounter));
   }
 
   return {
@@ -275,7 +289,10 @@ export function attackTurn(state: BattleState): BattleState {
           nextState,
           member.name,
           member.chargeAttack.label,
-          `${damage.toLocaleString()} CA damage. ${breakdown.notes.join(", ")}.`,
+        format(t.battle.chargeAttackDetail, {
+          damage: damage.toLocaleString(),
+          notes: breakdown.notes.join(" / "),
+        }),
           damage,
         ),
       );
@@ -298,8 +315,16 @@ export function attackTurn(state: BattleState): BattleState {
       makeLog(
         nextState,
         member.name,
-        hits === 3 ? "Triple attack" : hits === 2 ? "Double attack" : "Attack",
-        `${hits} hit(s) for ${breakdown.finalDamage.toLocaleString()} damage. ${breakdown.notes.join(", ")}.`,
+        hits === 3
+          ? t.battle.attackNames.triple
+          : hits === 2
+            ? t.battle.attackNames.double
+            : t.battle.attackNames.single,
+        format(t.battle.normalAttackDetail, {
+          damage: breakdown.finalDamage.toLocaleString(),
+          hits,
+          notes: breakdown.notes.join(" / "),
+        }),
         breakdown.finalDamage,
       ),
     );
@@ -313,9 +338,9 @@ export function attackTurn(state: BattleState): BattleState {
     nextState.log.push(
       makeLog(
         nextState,
-        "Party",
-        `${chainCount}-chain burst`,
-        `${chainDamage.toLocaleString()} bonus chain burst damage.`,
+        t.panels.party,
+        format(t.battle.chainBurst, { count: chainCount }),
+        format(t.battle.chainBurstDetail, { damage: chainDamage.toLocaleString() }),
         chainDamage,
       ),
     );
@@ -329,7 +354,12 @@ export function attackTurn(state: BattleState): BattleState {
   nextState = resolveEnemySpecial(nextState);
   nextState = resolveCounters(nextState);
 
-  return endTurn(nextState, chainCount > 0 ? `${chainCount}-chain attack resolved` : "Normal attack turn resolved");
+  return endTurn(
+    nextState,
+    chainCount > 0
+      ? format(t.battle.chainResolved, { count: chainCount })
+      : t.battle.normalTurnResolved,
+  );
 }
 
 function endTurn(state: BattleState, summary: string): BattleState {
