@@ -3,7 +3,8 @@
 This workspace is for building a game whose core direction is:
 
 - A web game with a GBF-like + DRPG core.
-- GBF-like means the project should study and adapt Granblue Fantasy-style combat, progression, party, weapon grid, summon, element, buff/debuff, charge attack, damage formula, and cap systems.
+- GBF-like means the project should study and adapt Granblue Fantasy-style combat, progression, party, weapon grid, summon, buff/debuff, charge attack, damage formula, and cap systems.
+- Unlike GBF, this game intentionally does not have element identities or element matchup selection. Combat should default to the player fighting with advantage; formula code uses a fixed default advantage multiplier instead of character/enemy element fields.
 - DRPG means the project should combine those systems with dungeon RPG structure: dungeon exploration, party building, encounters, progression, and repeatable run/expedition loops.
 - The current development environment is a browser app: Vite + React + TypeScript for the UI/application shell, with PixiJS available for future 2D dungeon or battle rendering.
 - Battle logic should stay data-driven and modifier-based. Formula code lives under `src/game/`, with combat types, damage formulas, demo state, and the battle engine separated so future skills, weapon skills, summons, buffs, debuffs, EMPs, and enemy mechanics can add modifiers without rewriting the core formulas.
@@ -46,6 +47,8 @@ Source: https://gbf.wiki/
 - [Summon Aura](https://gbf.wiki/Summon_Aura)
 
 ## Element System
+
+GBF has element systems, but GLD intentionally does not implement element identities or matchup selection.
 
 - [Elements](https://gbf.wiki/Elements)
 - [Elemental Damage](https://gbf.wiki/Elemental_Damage)

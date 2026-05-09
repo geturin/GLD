@@ -17,7 +17,7 @@ export function describeSkill(skill: SkillDefinition) {
 
   if (skill.kind === "damage") {
     return [
-      `${skill.hitCount ?? 1}-hit ${percent(skill.damageMultiplier ?? 1)} elemental skill damage to one foe.`,
+      `${skill.hitCount ?? 1}-hit ${percent(skill.damageMultiplier ?? 1)} skill damage to one foe.`,
       `Damage cap: ~${(skill.damageCap ?? 0).toLocaleString()} per hit.`,
       `Cooldown: ${turns(skill.cooldown)}.`,
     ].join(" ");

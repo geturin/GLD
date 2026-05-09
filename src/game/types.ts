@@ -1,5 +1,3 @@
-export type Element = "fire" | "water" | "earth" | "wind" | "light" | "dark";
-
 export type AttackKind = "normal" | "charge" | "skill" | "counter" | "chainBurst";
 
 export type CapSource = "weapon" | "summon" | "buff" | "passive" | "special";
@@ -8,7 +6,7 @@ export type ModifierBucket =
   | "normal"
   | "omega"
   | "ex"
-  | "elemental"
+  | "advantage"
   | "unique"
   | "seraphic"
   | "stamina"
@@ -87,7 +85,6 @@ export interface Combatant {
   id: string;
   name: string;
   role: string;
-  element: Element;
   maxHp: number;
   hp: number;
   baseAttack: number;
@@ -122,7 +119,6 @@ export interface WeaponGrid {
 export interface Enemy {
   id: string;
   name: string;
-  element: Element;
   maxHp: number;
   hp: number;
   attack: number;

@@ -5,7 +5,6 @@ import type {
   DamageBreakdown,
   DamageCapModifier,
   DamageContext,
-  Element,
   Enemy,
   ModifierBucket,
   ScalarModifier,
@@ -13,20 +12,13 @@ import type {
   SupplementalRule,
 } from "./types";
 
-const ELEMENT_ADVANTAGE: Record<Element, Element> = {
-  fire: "wind",
-  water: "fire",
-  earth: "water",
-  wind: "earth",
-  light: "dark",
-  dark: "light",
-};
+export const DEFAULT_ADVANTAGE_MULTIPLIER = 1.5;
 
 const BUCKET_DEFAULTS: Record<ModifierBucket, number> = {
   normal: 0,
   omega: 0,
   ex: 0,
-  elemental: 0,
+  advantage: 0,
   unique: 0,
   seraphic: 0,
   stamina: 0,
@@ -35,18 +27,6 @@ const BUCKET_DEFAULTS: Record<ModifierBucket, number> = {
   skillDamage: 0,
   amplified: 0,
 };
-
-export function elementMultiplier(attacker: Element, defender: Element) {
-  if (ELEMENT_ADVANTAGE[attacker] === defender) {
-    return 1.5;
-  }
-
-  if (ELEMENT_ADVANTAGE[defender] === attacker) {
-    return 0.75;
-  }
-
-  return 1;
-}
 
 export function collectStatusModifiers(statusEffects: StatusEffect[] = []) {
   return statusEffects.flatMap((effect) => effect.modifiers ?? []);
@@ -89,10 +69,10 @@ export function baseDamage(context: DamageContext) {
     ...context.attacker.personalModifiers,
     ...statusModifiers,
     {
-      id: "element-matchup",
-      label: "Element matchup",
-      bucket: "elemental",
-      value: elementMultiplier(context.attacker.element, context.enemy.element) - 1,
+      id: "default-advantage",
+      label: "Default advantage",
+      bucket: "advantage",
+      value: DEFAULT_ADVANTAGE_MULTIPLIER - 1,
     },
   ]);
 
@@ -104,7 +84,7 @@ export function baseDamage(context: DamageContext) {
   const normal = 1 + modifiers.normal;
   const omega = 1 + modifiers.omega;
   const ex = 1 + modifiers.ex;
-  const elemental = 1 + modifiers.elemental;
+  const advantage = 1 + modifiers.advantage;
   const unique = 1 + modifiers.unique;
   const seraphic = 1 + modifiers.seraphic;
   const amplified = 1 + modifiers.amplified;
@@ -120,7 +100,7 @@ export function baseDamage(context: DamageContext) {
       normal *
       omega *
       ex *
-      elemental *
+      advantage *
       unique *
       hpCurves.stamina *
       (1 + modifiers.stamina * hpRatio) *

@@ -121,7 +121,6 @@ export const demoParty: Combatant[] = [
     id: "demo-hero",
     name: "Aster",
     role: "Single-character combat demo",
-    element: "fire",
     maxHp: 16000,
     hp: 16000,
     baseAttack: 9800,
@@ -146,7 +145,6 @@ export const demoParty: Combatant[] = [
 export const demoEnemy: Enemy = {
   id: "foundry-warden",
   name: "Foundry Warden",
-  element: "wind",
   maxHp: 5_000_000,
   hp: 5_000_000,
   attack: 8500,

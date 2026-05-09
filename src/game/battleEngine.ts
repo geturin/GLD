@@ -315,7 +315,7 @@ export function attackTurn(state: BattleState): BattleState {
         nextState,
         "Party",
         `${chainCount}-chain burst`,
-        `${chainDamage.toLocaleString()} bonus elemental damage.`,
+        `${chainDamage.toLocaleString()} bonus chain burst damage.`,
         chainDamage,
       ),
     );

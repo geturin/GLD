@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { attackTurn, executeSkill } from "./game/battleEngine";
 import { createInitialBattleState } from "./game/demoState";
-import { elementMultiplier, resolveHit } from "./game/formulas";
+import { DEFAULT_ADVANTAGE_MULTIPLIER, resolveHit } from "./game/formulas";
 import { describeSkill } from "./game/skillText";
 import type { BattleState, Combatant } from "./game/types";
 
@@ -27,7 +27,7 @@ const coveredSystems = [
   "Chain burst",
   "Charge bar",
   "Weapon grid",
-  "Element matchup",
+  "Default advantage matchup",
   "Buffs and debuffs",
   "Defense",
   "Overdrive / break",
@@ -79,7 +79,6 @@ export function App() {
     [battle, selectedMember],
   );
   const enemyHpRate = hpPercent(battle.enemy.hp, battle.enemy.maxHp);
-  const elementRate = elementMultiplier(selectedMember.element, battle.enemy.element);
 
   function updateSelectedMember(updater: (member: Combatant) => Combatant) {
     setBattle((current) => ({
@@ -180,7 +179,7 @@ export function App() {
                 </span>
                 <span className="stat-row">
                   <small>HP {formatNumber(member.hp)}</small>
-                  <small>{member.element.toUpperCase()}</small>
+                  <small>Advantage</small>
                 </span>
               </button>
             ))}
@@ -296,8 +295,8 @@ export function App() {
               <div>
                 <h3>{battle.enemy.name}</h3>
                 <p>
-                  {battle.enemy.element.toUpperCase()} foe / DEF {battle.enemy.defense} /
-                  charge {battle.enemy.chargeDiamonds}/{battle.enemy.maxChargeDiamonds}
+                  Foe / DEF {battle.enemy.defense} / charge {battle.enemy.chargeDiamonds}/
+                  {battle.enemy.maxChargeDiamonds}
                 </p>
               </div>
             </div>
@@ -348,7 +347,7 @@ export function App() {
             </div>
             <div>
               <Flame size={18} />
-              Element x{elementRate}
+              Advantage x{DEFAULT_ADVANTAGE_MULTIPLIER}
             </div>
             <div>
               <Sparkles size={18} />
@@ -374,8 +373,8 @@ export function App() {
           <div className="formula-card">
             <h3>Formula Stack</h3>
             <p>
-              Character ATK, weapon grid, element, buffs, debuffs, unique bucket, crit,
-              soft cap, and skill hit count.
+              Character ATK, weapon grid, default advantage, buffs, debuffs, unique bucket,
+              crit, soft cap, and skill hit count.
             </p>
           </div>
         </aside>
