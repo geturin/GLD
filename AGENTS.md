@@ -6,6 +6,7 @@ This workspace is for building a game whose core direction is:
 - GBF-like means the project should study and adapt Granblue Fantasy-style combat, progression, party, weapon grid, summon, element, buff/debuff, charge attack, damage formula, and cap systems.
 - DRPG means the project should combine those systems with dungeon RPG structure: dungeon exploration, party building, encounters, progression, and repeatable run/expedition loops.
 - The current development environment is a browser app: Vite + React + TypeScript for the UI/application shell, with PixiJS available for future 2D dungeon or battle rendering.
+- Battle logic should stay data-driven and modifier-based. Formula code lives under `src/game/`, with combat types, damage formulas, demo state, and the battle engine separated so future skills, weapon skills, summons, buffs, debuffs, EMPs, and enemy mechanics can add modifiers without rewriting the core formulas.
 - This is the central product identity of the project. Future Codex sessions should preserve this direction and avoid drifting into a generic RPG, idle game, or unrelated combat prototype.
 
 # GBF English Wiki System Reference Index

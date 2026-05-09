@@ -28,8 +28,8 @@ button {
   min-height: 100vh;
   padding: 24px;
   background:
-    linear-gradient(135deg, rgba(37, 65, 70, 0.46), transparent 34%),
-    linear-gradient(315deg, rgba(96, 48, 54, 0.32), transparent 42%),
+    linear-gradient(135deg, rgba(33, 72, 76, 0.48), transparent 34%),
+    linear-gradient(315deg, rgba(105, 50, 57, 0.32), transparent 42%),
     #15171a;
 }
 
@@ -39,7 +39,7 @@ button {
   justify-content: space-between;
   gap: 18px;
   margin: 0 auto 24px;
-  max-width: 1440px;
+  max-width: 1540px;
 }
 
 .eyebrow {
@@ -70,12 +70,23 @@ h2 {
 }
 
 h3 {
-  margin-bottom: 4px;
-  font-size: 0.95rem;
+  margin-bottom: 6px;
+  font-size: 0.98rem;
+}
+
+.mode-tabs,
+.command-deck,
+.battle-strip,
+.section-title,
+.panel-heading,
+.stage-header,
+.enemy-core,
+.mode-badge {
+  display: flex;
+  align-items: center;
 }
 
 .mode-tabs {
-  display: flex;
   gap: 8px;
   padding: 4px;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -83,17 +94,23 @@ h3 {
   background: rgba(13, 15, 17, 0.7);
 }
 
-.mode-tabs button {
+.mode-tabs button,
+.command-deck button,
+.skill-grid button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   min-height: 40px;
-  padding: 0 14px;
   border: 0;
   border-radius: 6px;
+  cursor: pointer;
+}
+
+.mode-tabs button {
+  padding: 0 14px;
   color: #cbd6dc;
   background: transparent;
-  cursor: pointer;
 }
 
 .mode-tabs button.active {
@@ -101,43 +118,38 @@ h3 {
   background: #8fd7c7;
 }
 
-.game-layout {
+.combat-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(360px, 1fr) minmax(220px, 300px);
+  grid-template-columns: minmax(230px, 300px) minmax(420px, 1fr) minmax(250px, 330px);
   gap: 16px;
-  max-width: 1440px;
+  max-width: 1540px;
   margin: 0 auto;
 }
 
 .panel,
-.stage {
+.battle-stage,
+.log-dock {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
-  background: rgba(20, 23, 26, 0.82);
+  background: rgba(20, 23, 26, 0.84);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
-.panel {
+.panel,
+.battle-stage,
+.log-dock {
   padding: 16px;
 }
 
 .panel-heading,
 .stage-header,
-.battle-strip,
-.turn-meter {
-  display: flex;
-  align-items: center;
-}
-
-.panel-heading,
-.stage-header {
-  justify-content: space-between;
-  gap: 12px;
+.section-title {
+  gap: 10px;
   margin-bottom: 16px;
 }
 
-.panel-heading {
-  justify-content: flex-start;
+.stage-header {
+  justify-content: space-between;
 }
 
 .party-list {
@@ -146,108 +158,194 @@ h3 {
 }
 
 .party-card {
+  width: 100%;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  color: #eef4f8;
   background: rgba(255, 255, 255, 0.04);
+  text-align: left;
 }
 
-.party-card p {
-  margin-bottom: 12px;
+.party-card.selectable {
+  display: grid;
+  gap: 10px;
+}
+
+.party-card.selected {
+  border-color: #8fd7c7;
+  background: rgba(143, 215, 199, 0.12);
+}
+
+.party-card strong,
+.party-card small,
+.stat-row,
+.large-hp span {
+  display: block;
+}
+
+.party-card small,
+.enemy-core p,
+.formula-card p,
+.log-dock p {
   color: #aab8c0;
   font-size: 0.86rem;
 }
 
-dl {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 0;
+.charge-pill {
+  justify-self: start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #101315;
+  background: #f4d58b;
+  font-size: 0.76rem;
+  font-weight: 800;
 }
 
-dt {
-  color: #87959e;
-  font-size: 0.72rem;
-}
-
-dd {
-  margin: 2px 0 0;
-  color: #f4d58b;
-  font-weight: 700;
-}
-
-.stage {
-  min-height: 680px;
-  padding: 18px;
-}
-
-.turn-meter,
-.battle-strip div {
-  gap: 8px;
-  color: #f4d58b;
-  font-weight: 700;
-}
-
-.dungeon-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(48px, 1fr));
-  gap: 10px;
-  aspect-ratio: 1 / 1;
-  max-height: 540px;
-  margin: 0 auto;
-}
-
-.dungeon-cell {
+.bar,
+.large-hp {
   position: relative;
-  min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  background: #24282c;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
 }
 
-.dungeon-cell::after {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: 38%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  content: "";
-  transform: translate(-50%, -50%);
+.bar {
+  height: 8px;
 }
 
-.path::after,
-.start::after,
-.exit::after {
+.bar i,
+.large-hp i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8fd7c7, #f4d58b);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.battle-stage {
+  min-height: 690px;
+}
+
+.mode-badge {
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: #101315;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.mode-badge.normal {
   background: #8fd7c7;
 }
 
-.wall {
-  background: #101315;
-}
-
-.wall::after {
-  display: none;
-}
-
-.void::after {
-  background: #6b7280;
-}
-
-.elite::after,
-.boss::after {
+.mode-badge.overdrive {
   background: #e65f5c;
 }
 
-.treasure::after,
-.relic::after,
-.camp::after {
+.mode-badge.break {
   background: #f4d58b;
+}
+
+.enemy-board {
+  display: grid;
+  gap: 18px;
+  min-height: 290px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(230, 95, 92, 0.24), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+}
+
+.enemy-core {
+  justify-content: center;
+  gap: 18px;
+  min-height: 180px;
+}
+
+.enemy-sigil {
+  display: grid;
+  place-items: center;
+  width: min(28vw, 150px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(244, 213, 139, 0.4);
+  border-radius: 50%;
+  color: #f4d58b;
+  background: rgba(244, 213, 139, 0.08);
+}
+
+.large-hp {
+  height: 30px;
+}
+
+.large-hp span {
+  position: absolute;
+  z-index: 1;
+  inset: 5px 12px auto auto;
+  color: #101315;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.command-deck {
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.command-deck button,
+.skill-grid button {
+  padding: 0 14px;
+  color: #eef4f8;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.command-deck .primary-command {
+  color: #101315;
+  background: #8fd7c7;
+  font-weight: 900;
+}
+
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.skill-grid .section-title {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.skill-grid button {
+  justify-content: space-between;
+  min-height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.skill-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.skill-grid small {
+  color: #f4d58b;
+  font-weight: 800;
 }
 
 .battle-strip {
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 18px;
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
@@ -256,35 +354,90 @@ dd {
 
 .battle-strip div {
   display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #f4d58b;
+  font-weight: 800;
 }
 
 .system-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .system-list li {
-  padding: 12px;
+  padding: 9px 10px;
   border-left: 3px solid #8fd7c7;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
   color: #dce6eb;
+  font-size: 0.9rem;
 }
 
-.render-note {
+.system-list.compact {
+  grid-template-columns: 1fr;
+}
+
+.formula-card {
   margin-top: 18px;
   padding: 12px;
   border-radius: 8px;
   background: rgba(244, 213, 139, 0.12);
-  color: #f4d58b;
-  font-size: 0.9rem;
-  line-height: 1.5;
 }
 
-@media (max-width: 980px) {
+.formula-card h3 {
+  color: #f4d58b;
+}
+
+.formula-card p {
+  margin-bottom: 0;
+  line-height: 1.55;
+}
+
+.log-dock {
+  max-width: 1540px;
+  margin: 16px auto 0;
+}
+
+.log-dock ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.log-dock li {
+  min-height: 112px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.log-dock span,
+.log-dock em {
+  color: #8fd7c7;
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.log-dock strong {
+  display: block;
+  margin: 4px 0;
+}
+
+.log-dock p {
+  margin-bottom: 0;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
   .topbar {
     align-items: stretch;
     flex-direction: column;
@@ -294,28 +447,26 @@ dd {
     overflow-x: auto;
   }
 
-  .game-layout {
+  .combat-layout {
     grid-template-columns: 1fr;
   }
 
-  .stage {
+  .battle-stage {
     min-height: auto;
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 620px) {
   .app-shell {
     padding: 14px;
   }
 
-  .mode-tabs button {
+  .mode-tabs button,
+  .command-deck button {
     padding: 0 10px;
   }
 
-  .dungeon-grid {
-    gap: 6px;
-  }
-
+  .enemy-core,
   .battle-strip {
     align-items: flex-start;
     flex-direction: column;

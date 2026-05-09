@@ -1,51 +1,91 @@
+import { useMemo, useState } from "react";
 import {
   Activity,
   Axe,
   Flame,
   Gem,
   Map,
+  RotateCcw,
   Shield,
   Sparkles,
   Swords,
+  Zap,
 } from "lucide-react";
+import { attackTurn, callSupportSummon, executeSkill } from "./game/battleEngine";
+import { createInitialBattleState } from "./game/demoState";
+import { elementMultiplier, resolveHit } from "./game/formulas";
+import type { BattleState, Combatant } from "./game/types";
 
-const party = [
-  { name: "Vanguard", role: "MC / Tank", element: "Fire", hp: "18,420" },
-  { name: "Hexblade", role: "Attacker", element: "Dark", hp: "13,880" },
-  { name: "Cantor", role: "Buffer", element: "Wind", hp: "12,760" },
-  { name: "Mender", role: "Healer", element: "Water", hp: "14,210" },
+const coveredSystems = [
+  "Damage formula",
+  "Damage cap / cap up",
+  "Multiattack",
+  "Critical",
+  "Bonus and supplemental damage",
+  "Charge attack",
+  "Chain burst",
+  "Charge bar",
+  "Weapon grid",
+  "Summon aura / call",
+  "Element matchup",
+  "Buffs and debuffs",
+  "Defense",
+  "Overdrive / break",
+  "Turn and action order",
+  "Class / character passives",
+  "Stamina / enmity hooks",
+  "Skill damage",
+  "Counters / substitute",
+  "Dispel / delay hooks",
 ];
 
-const systems = [
-  "Weapon grid multipliers",
-  "Element advantage",
-  "Buff and debuff layers",
-  "Charge attack cadence",
-  "Damage cap pressure",
-];
+function formatNumber(value: number) {
+  return Math.round(value).toLocaleString();
+}
 
-const dungeonRows = [
-  ["start", "path", "path", "relic", "path"],
-  ["void", "wall", "path", "wall", "path"],
-  ["path", "path", "elite", "path", "camp"],
-  ["path", "wall", "path", "wall", "path"],
-  ["treasure", "path", "path", "boss", "exit"],
-];
+function hpPercent(current: number, max: number) {
+  return `${Math.max(0, Math.min(100, (current / max) * 100))}%`;
+}
+
+function expectedNormalDamage(state: BattleState, member: Combatant) {
+  return resolveHit({
+    attacker: member,
+    enemy: state.enemy,
+    weaponGrid: state.weaponGrid,
+    summons: state.summons,
+    kind: "normal",
+    hitMultiplier: 1,
+    cap: 440000,
+    criticalSeed: state.turn * 31,
+  });
+}
 
 export function App() {
+  const [battle, setBattle] = useState(createInitialBattleState);
+  const [selectedMemberId, setSelectedMemberId] = useState(battle.party[0].id);
+
+  const selectedMember =
+    battle.party.find((member) => member.id === selectedMemberId) ?? battle.party[0];
+  const selectedPreview = useMemo(
+    () => expectedNormalDamage(battle, selectedMember),
+    [battle, selectedMember],
+  );
+  const enemyHpRate = hpPercent(battle.enemy.hp, battle.enemy.maxHp);
+  const elementRate = elementMultiplier(selectedMember.element, battle.enemy.element);
+
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">GBF-like DRPG web game</p>
-          <h1>GLD Command Deck</h1>
+          <p className="eyebrow">GBF-like battle demo</p>
+          <h1>GLD Combat Lab</h1>
         </div>
         <nav className="mode-tabs" aria-label="Game work modes">
-          <button className="active" type="button">
+          <button type="button">
             <Map size={18} />
             Dungeon
           </button>
-          <button type="button">
+          <button className="active" type="button">
             <Swords size={18} />
             Battle
           </button>
@@ -56,87 +96,163 @@ export function App() {
         </nav>
       </header>
 
-      <section className="game-layout" aria-label="Game prototype workspace">
+      <section className="combat-layout" aria-label="GBF-like combat prototype">
         <aside className="panel party-panel">
           <div className="panel-heading">
             <Shield size={18} />
             <h2>Party</h2>
           </div>
           <div className="party-list">
-            {party.map((member) => (
-              <article className="party-card" key={member.name}>
-                <div>
-                  <h3>{member.name}</h3>
-                  <p>{member.role}</p>
-                </div>
-                <dl>
-                  <div>
-                    <dt>Element</dt>
-                    <dd>{member.element}</dd>
-                  </div>
-                  <div>
-                    <dt>HP</dt>
-                    <dd>{member.hp}</dd>
-                  </div>
-                </dl>
-              </article>
+            {battle.party.map((member) => (
+              <button
+                className={`party-card selectable ${member.id === selectedMember.id ? "selected" : ""}`}
+                key={member.id}
+                onClick={() => setSelectedMemberId(member.id)}
+                type="button"
+              >
+                <span>
+                  <strong>{member.name}</strong>
+                  <small>{member.role}</small>
+                </span>
+                <span className="charge-pill">{member.chargeBar}% CA</span>
+                <span className="bar">
+                  <i style={{ width: hpPercent(member.hp, member.maxHp) }} />
+                </span>
+                <span className="stat-row">
+                  <small>HP {formatNumber(member.hp)}</small>
+                  <small>{member.element.toUpperCase()}</small>
+                </span>
+              </button>
             ))}
           </div>
         </aside>
 
-        <section className="stage" aria-label="Dungeon map">
+        <section className="battle-stage" aria-label="Battle stage">
           <div className="stage-header">
             <div>
-              <p className="eyebrow">Expedition 01</p>
-              <h2>Azure Foundry Depths</h2>
+              <p className="eyebrow">Turn {battle.turn}</p>
+              <h2>{battle.enemy.name}</h2>
             </div>
-            <div className="turn-meter">
+            <div className={`mode-badge ${battle.enemy.mode}`}>
               <Activity size={18} />
-              Turn 04
+              {battle.enemy.mode}
             </div>
           </div>
-          <div className="dungeon-grid" role="img" aria-label="Five by five dungeon route map">
-            {dungeonRows.flatMap((row, rowIndex) =>
-              row.map((cell, columnIndex) => (
-                <span
-                  className={`dungeon-cell ${cell}`}
-                  key={`${rowIndex}-${columnIndex}`}
-                  title={cell}
-                />
-              )),
-            )}
-          </div>
-          <div className="battle-strip" aria-label="Battle forecast">
+
+          <section className="enemy-board" aria-label="Enemy state">
+            <div className="enemy-core">
+              <div className="enemy-sigil">
+                <Flame size={54} />
+              </div>
+              <div>
+                <h3>{battle.enemy.name}</h3>
+                <p>
+                  {battle.enemy.element.toUpperCase()} foe / DEF {battle.enemy.defense} /
+                  charge {battle.enemy.chargeDiamonds}/{battle.enemy.maxChargeDiamonds}
+                </p>
+              </div>
+            </div>
+            <div className="large-hp">
+              <span>{formatNumber(battle.enemy.hp)} HP</span>
+              <i style={{ width: enemyHpRate }} />
+            </div>
+          </section>
+
+          <section className="command-deck" aria-label="Battle commands">
+            <button className="primary-command" onClick={() => setBattle(attackTurn)} type="button">
+              <Swords size={20} />
+              Attack Turn
+            </button>
+            <button onClick={() => setBattle(callSupportSummon)} type="button">
+              <Sparkles size={18} />
+              Summon Call
+            </button>
+            <button onClick={() => setBattle(createInitialBattleState())} type="button">
+              <RotateCcw size={18} />
+              Reset
+            </button>
+          </section>
+
+          <section className="skill-grid" aria-label={`${selectedMember.name} skills`}>
+            <div className="section-title">
+              <Zap size={18} />
+              <h2>{selectedMember.name} Skills</h2>
+            </div>
+            {selectedMember.skills.map((skill) => (
+              <button
+                disabled={skill.remainingCooldown > 0}
+                key={skill.id}
+                onClick={() =>
+                  setBattle((current) => executeSkill(current, selectedMember.id, skill.id))
+                }
+                type="button"
+              >
+                <span>{skill.label}</span>
+                <small>
+                  {skill.remainingCooldown > 0 ? `${skill.remainingCooldown}T` : skill.kind}
+                </small>
+              </button>
+            ))}
+          </section>
+
+          <section className="battle-strip" aria-label="Damage preview">
             <div>
               <Axe size={18} />
-              Enemy DEF 10
+              Base {formatNumber(selectedPreview.baseDamage)}
             </div>
             <div>
               <Flame size={18} />
-              Fire advantage
+              Element x{elementRate}
             </div>
             <div>
               <Sparkles size={18} />
-              CA chain ready
+              Cap {formatNumber(selectedPreview.cap)}
             </div>
-          </div>
+            <div>
+              <Zap size={18} />
+              Hit {formatNumber(selectedPreview.finalDamage)}
+            </div>
+          </section>
         </section>
 
         <aside className="panel systems-panel">
           <div className="panel-heading">
             <Sparkles size={18} />
-            <h2>Core Systems</h2>
+            <h2>Systems</h2>
           </div>
-          <ul className="system-list">
-            {systems.map((system) => (
+          <ul className="system-list compact">
+            {coveredSystems.map((system) => (
               <li key={system}>{system}</li>
             ))}
           </ul>
-          <div className="render-note">
-            PixiJS is installed for the future canvas renderer; this first screen keeps the
-            tactical UI in React so combat and grid logic can grow cleanly.
+          <div className="formula-card">
+            <h3>Formula Stack</h3>
+            <p>
+              ATK buckets, element, HP curves, crit, soft cap, echo, supplemental.
+            </p>
           </div>
         </aside>
+      </section>
+
+      <section className="log-dock" aria-label="Battle log">
+        <div className="section-title">
+          <Activity size={18} />
+          <h2>{battle.lastActionSummary}</h2>
+        </div>
+        <ol>
+          {battle.log
+            .slice()
+            .reverse()
+            .slice(0, 10)
+            .map((entry) => (
+              <li key={entry.id}>
+                <span>T{entry.turn}</span>
+                <strong>{entry.actor}</strong>
+                <em>{entry.action}</em>
+                <p>{entry.detail}</p>
+              </li>
+            ))}
+        </ol>
       </section>
     </main>
   );
