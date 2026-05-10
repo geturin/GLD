@@ -14,6 +14,7 @@ This workspace is for building a game whose core direction is:
 - Content data such as weapons, characters, enemies, and weapon grid templates should live in JSON files under `src/data/`. TypeScript files should load, type, validate, aggregate, and simulate that data rather than hard-coding content definitions directly.
 - Use `docs/combat-system-gap-analysis.md` as the current comparison between GBF wiki combat flow and GLD's implementation. The first ten listed combat gaps have been implemented as a first pass; future work should focus on the remaining extension notes or on refining those first-pass systems.
 - Future development should use Simplified Chinese as the base product language. User-facing UI strings should live in locale files under `src/i18n/` instead of being hard-coded in React components or game logic, so later language packs can be added cleanly.
+- Visual direction should lean toward dot-matrix/pixel art with a 1990s JRPG feeling. Battle screens should prioritize a GBF-like composition: enemy HP/status at the top, enemy model on the left, party/character models on the right, and character cards below that open skill and Buff/Debuff details. Do not surface a summon command until the summon system exists.
 - This is the central product identity of the project. Future Codex sessions should preserve this direction and avoid drifting into a generic RPG, idle game, or unrelated combat prototype.
 
 # GBF English Wiki System Reference Index

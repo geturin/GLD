@@ -3,6 +3,7 @@
     "id": "demo-hero",
     "name": "阿斯特",
     "role": "单角色战斗 Demo",
+    "spriteUrl": "/assets/characters/aster-pixel.svg",
     "maxHp": 16000,
     "hp": 16000,
     "baseAttack": 9800,

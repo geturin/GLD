@@ -2,6 +2,7 @@
   {
     "id": "foundry-warden",
     "name": "铸炉守卫",
+    "spriteUrl": "/assets/enemies/foundry-warden-pixel.svg",
     "maxHp": 5000000,
     "hp": 5000000,
     "attack": 8500,

@@ -8,6 +8,8 @@ GLD intentionally does not use element identities or selectable element matchups
 
 The current base language is Simplified Chinese. UI strings are centralized under `src/i18n/` so future language versions can be added without rewriting components or combat logic.
 
+The current visual direction is pixel art with a 1990s JRPG feel. Battle UI should keep a GBF-like structure: enemy HP/status at the top, enemy model on the left, party models on the right, and bottom character cards for selecting skills and viewing Buff/Debuff details. Summon UI stays hidden until the summon system is implemented.
+
 Combat system notes:
 
 - [GLD 战斗计算流程梳理](docs/combat-system-gap-analysis.md)

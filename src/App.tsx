@@ -43,6 +43,10 @@ function hpPercent(current: number, max: number) {
   return `${Math.max(0, Math.min(100, (current / max) * 100))}%`;
 }
 
+function spriteAlt(name: string) {
+  return formatTemplate(t.battleScene.spriteAlt, { name });
+}
+
 function expectedNormalDamage(state: BattleState, member: Combatant) {
   return resolveHit({
     attacker: member,
@@ -285,6 +289,7 @@ function createBlankCharacter(): Combatant {
     id: `character-${Date.now()}`,
     name: "新角色",
     role: "自定义角色",
+    spriteUrl: "/assets/characters/aster-pixel.svg",
     maxHp: 10000,
     hp: 10000,
     baseAttack: 8000,
@@ -310,6 +315,7 @@ function createBlankEnemy(): Enemy {
   return {
     id: `enemy-${Date.now()}`,
     name: "新怪物",
+    spriteUrl: "/assets/enemies/foundry-warden-pixel.svg",
     maxHp: 1000000,
     hp: 1000000,
     attack: 5000,
@@ -631,6 +637,13 @@ export function App() {
                 onClick={() => setSelectedMemberId(member.id)}
                 type="button"
               >
+                {member.spriteUrl ? (
+                  <img
+                    alt={spriteAlt(member.name)}
+                    className="party-card-sprite"
+                    src={member.spriteUrl}
+                  />
+                ) : null}
                 <span>
                   <strong>{member.name}</strong>
                   <small>{member.role}</small>
@@ -719,77 +732,131 @@ export function App() {
           </section>
         </aside>
 
-        <section className="battle-stage" aria-label="战斗舞台">
-          <div className="stage-header">
-            <div>
-              <p className="eyebrow">{t.battle.turn} {battle.turn}</p>
-              <h2>{battle.enemy.name}</h2>
+        <section className="battle-stage" aria-label={t.battleScene.aria}>
+          <section className="enemy-hud" aria-label={t.battleScene.enemyStatus}>
+            <div className="enemy-hud-main">
+              <span className="turn-chip">{t.battle.turn} {battle.turn}</span>
+              <div>
+                <h2>{battle.enemy.name}</h2>
+                <p>
+                  {t.battleScene.mode} {battle.enemy.mode} / {t.battle.defense} {battle.enemy.defense} / {t.battleScene.ct} {battle.enemy.chargeDiamonds}/{battle.enemy.maxChargeDiamonds}
+                </p>
+              </div>
+            </div>
+            <div className="enemy-hp-block">
+              <div className="large-hp">
+                <span>{formatNumber(battle.enemy.hp)} / {formatNumber(battle.enemy.maxHp)} {t.battle.hp}</span>
+                <i style={{ width: enemyHpRate }} />
+              </div>
+              <div className="mode-gauge">
+                <span>{t.battleScene.modeGauge}</span>
+                <i style={{ width: hpPercent(battle.enemy.modeGauge, 1) }} />
+              </div>
             </div>
             <div className={`mode-badge ${battle.enemy.mode}`}>
               <Activity size={18} />
               {battle.enemy.mode}
             </div>
-          </div>
-
-          <section className="enemy-board" aria-label="敌人状态">
-            <div className="enemy-core">
-              <div className="enemy-sigil">
-                <Flame size={54} />
-              </div>
-              <div>
-                <h3>{battle.enemy.name}</h3>
-                <p>
-                  {t.battle.foe} / {t.battle.defense} {battle.enemy.defense} / {t.battle.chargeDiamond} {battle.enemy.chargeDiamonds}/
-                  {battle.enemy.maxChargeDiamonds}
-                </p>
-              </div>
-            </div>
-            <div className="large-hp">
-              <span>{formatNumber(battle.enemy.hp)} {t.battle.hp}</span>
-              <i style={{ width: enemyHpRate }} />
-            </div>
-            <StatusList
-              effects={battle.enemy.statusEffects}
-              emptyText={t.battle.noStatusEffects}
-              title={t.panels.statusEffects}
-            />
           </section>
 
-          <section className="command-deck" aria-label="战斗指令">
-            <button className="primary-command" onClick={() => setBattle(attackTurn)} type="button">
-              <Swords size={20} />
-              {t.commands.attackTurn}
-            </button>
-            <button onClick={() => resetBattle()} type="button">
-              <RotateCcw size={18} />
-              {t.commands.reset}
-            </button>
+          <section className="pixel-battlefield" aria-label={t.battleScene.field}>
+            <div className="combat-side enemy-side">
+              {battle.enemy.spriteUrl ? (
+                <img
+                  alt={spriteAlt(battle.enemy.name)}
+                  className="battle-sprite enemy-sprite"
+                  src={battle.enemy.spriteUrl}
+                />
+              ) : null}
+              <StatusList
+                effects={battle.enemy.statusEffects}
+                emptyText={t.battle.noStatusEffects}
+                title={`${battle.enemy.name} ${t.panels.statusEffects}`}
+              />
+            </div>
+
+            <div className="combat-side party-side">
+              {selectedMember.spriteUrl ? (
+                <img
+                  alt={spriteAlt(selectedMember.name)}
+                  className="battle-sprite hero-sprite"
+                  src={selectedMember.spriteUrl}
+                />
+              ) : null}
+              <div className="active-character-card">
+                <span>{t.battleScene.activeCharacter}</span>
+                <strong>{selectedMember.name}</strong>
+                <small>{selectedMember.role}</small>
+              </div>
+            </div>
           </section>
 
-          <section className="skill-grid" aria-label={`${selectedMember.name}${t.panels.skills}`}>
-            <div className="section-title">
-              <Zap size={18} />
-              <h2>{selectedMember.name}{t.panels.skills}</h2>
+          <section className="battle-command-panel" aria-label={t.battleScene.characterCommands}>
+            <div className="character-strip">
+              {battle.party.map((member) => (
+                <button
+                  className={`character-tile ${member.id === selectedMember.id ? "selected" : ""}`}
+                  key={member.id}
+                  onClick={() => setSelectedMemberId(member.id)}
+                  type="button"
+                >
+                  {member.spriteUrl ? (
+                    <img alt={spriteAlt(member.name)} src={member.spriteUrl} />
+                  ) : null}
+                  <span>
+                    <strong>{member.name}</strong>
+                    <small>{formatNumber(member.hp)} / {formatNumber(member.maxHp + battle.weaponGrid.hp)}</small>
+                  </span>
+                  <em>{member.chargeBar}% CA</em>
+                </button>
+              ))}
+              <div className="summon-placeholder">{t.battleScene.noSummon}</div>
             </div>
-            {selectedMember.skills.map((skill) => (
-              <button
-                disabled={skill.remainingCooldown > 0}
-                key={skill.id}
-                onClick={() =>
-                  setBattle((current) => executeSkill(current, selectedMember.id, skill.id))
-                }
-                type="button"
-              >
-                <span className="skill-copy">
-                  <strong>{skill.label}</strong>
-                  <small>{describeSkill(skill)}</small>
-                </span>
-                <em>{skill.remainingCooldown > 0 ? `${skill.remainingCooldown}T` : skill.kind}</em>
+
+            <div className="command-deck" aria-label={t.battleScene.commandCenter}>
+              <button className="primary-command" onClick={() => setBattle(attackTurn)} type="button">
+                <Swords size={20} />
+                {t.commands.attackTurn}
               </button>
-            ))}
+              <button onClick={() => resetBattle()} type="button">
+                <RotateCcw size={18} />
+                {t.commands.reset}
+              </button>
+            </div>
+
+            <div className="character-detail-grid">
+              <section className="skill-grid" aria-label={`${selectedMember.name}${t.panels.skills}`}>
+                <div className="section-title">
+                  <Zap size={18} />
+                  <h2>{t.battleScene.skillPanel}</h2>
+                </div>
+                {selectedMember.skills.map((skill) => (
+                  <button
+                    disabled={skill.remainingCooldown > 0}
+                    key={skill.id}
+                    onClick={() =>
+                      setBattle((current) => executeSkill(current, selectedMember.id, skill.id))
+                    }
+                    type="button"
+                  >
+                    <span className="skill-copy">
+                      <strong>{skill.label}</strong>
+                      <small>{describeSkill(skill)}</small>
+                    </span>
+                    <em>{skill.remainingCooldown > 0 ? `${skill.remainingCooldown}T` : skill.kind}</em>
+                  </button>
+                ))}
+              </section>
+
+              <StatusList
+                effects={selectedMember.statusEffects}
+                emptyText={t.battle.noStatusEffects}
+                title={`${selectedMember.name} ${t.panels.statusEffects}`}
+              />
+            </div>
           </section>
 
-          <section className="battle-strip" aria-label="伤害预览">
+          <section className="battle-strip" aria-label={t.battleScene.previewPanel}>
             <div>
               <Axe size={18} />
               {t.preview.base} {formatNumber(selectedPreview.baseDamage)}

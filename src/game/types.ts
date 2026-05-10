@@ -123,6 +123,7 @@ export interface Combatant {
   id: string;
   name: string;
   role: string;
+  spriteUrl?: string;
   maxHp: number;
   hp: number;
   baseAttack: number;
@@ -197,6 +198,7 @@ export interface WeaponSkillEffects {
 export interface Enemy {
   id: string;
   name: string;
+  spriteUrl?: string;
   maxHp: number;
   hp: number;
   attack: number;
