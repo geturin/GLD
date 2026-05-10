@@ -8,6 +8,10 @@ GLD intentionally does not use element identities or selectable element matchups
 
 The current base language is Simplified Chinese. UI strings are centralized under `src/i18n/` so future language versions can be added without rewriting components or combat logic.
 
+Combat system notes:
+
+- [GLD 战斗计算流程梳理](docs/combat-system-gap-analysis.md)
+
 ## Development
 
 This project uses Vite, React, and TypeScript for the web game shell. PixiJS is included for future 2D dungeon and battle rendering.
