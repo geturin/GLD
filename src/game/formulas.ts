@@ -147,12 +147,14 @@ export function baseDamage(context: DamageContext) {
     },
   ]);
 
-  const hpRatio = Math.max(0, Math.min(1, context.attacker.hp / context.attacker.maxHp));
+  const effectiveMaxHp = context.attacker.maxHp + context.weaponGrid.hp;
+  const hpRatio = Math.max(0, Math.min(1, context.attacker.hp / effectiveMaxHp));
   const attack =
     context.attacker.baseAttack + context.weaponGrid.attack + context.enemy.defense * 24;
   const effectiveDefense = Math.max(
     1,
-    context.enemy.defense * Math.max(0.1, 1 + enemyDefenseUp - enemyDefenseDown),
+    context.enemy.defense *
+      Math.max(0.1, 1 + enemyDefenseUp - enemyDefenseDown - context.weaponGrid.defenseIgnore),
   );
   const normal = 1 + modifiers.normal;
   const omega = 1 + modifiers.omega;
@@ -273,7 +275,7 @@ export function resolveHit(context: DamageContext, hitCount = 1): DamageBreakdow
   const capped = applyDamageCapTable(preCap, context.kind, cap / context.cap);
   const primaryDamage = capped * hitCount;
   const supplemental = supplementalDamage(supplementals, context.kind, hitCount, crit > 1);
-  const bonusInstances: DamageInstance[] = context.attacker.bonusDamage
+  const bonusInstances: DamageInstance[] = [...context.weaponGrid.bonusDamage, ...context.attacker.bonusDamage]
     .filter((bonusRule) => !bonusRule.appliesTo || bonusRule.appliesTo.includes(context.kind))
     .map((bonusRule) => {
       const rawBonus = capped * bonusRule.multiplier;
@@ -328,13 +330,20 @@ export function resolveHit(context: DamageContext, hitCount = 1): DamageBreakdow
   };
 }
 
-export function normalHitCount(attacker: Combatant, seed: number) {
+export function normalHitCount(
+  attacker: Combatant,
+  seed: number,
+  gridMultiattack: Partial<{ double: number; triple: number }> = {},
+) {
   const statusMa = attacker.statusEffects.reduce(
     (profile, effect) => ({
       double: profile.double + (effect.multiattack?.double ?? 0),
       triple: profile.triple + (effect.multiattack?.triple ?? 0),
     }),
-    { double: attacker.multiattack.double, triple: attacker.multiattack.triple },
+    {
+      double: attacker.multiattack.double + (gridMultiattack.double ?? 0),
+      triple: attacker.multiattack.triple + (gridMultiattack.triple ?? 0),
+    },
   );
   const roll = deterministicRoll(seed, `${attacker.id}-ma`);
 

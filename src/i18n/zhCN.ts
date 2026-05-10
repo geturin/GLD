@@ -15,6 +15,7 @@ export const zhCN = {
     systems: "系统",
     battleLog: "战斗日志",
     statusEffects: "状态效果",
+    weaponGrid: "武器盘",
   },
   groups: {
     base: "基础",
@@ -52,6 +53,18 @@ export const zhCN = {
     skillSupplemental: "技能补充",
     chargeAttackSupplemental: "奥义补充",
     randomVariance: "随机伤害浮动",
+    weaponAttack: "武器 ATK",
+    weaponHp: "武器 HP",
+    activeMainhands: "启用主手",
+    skillBoost: "技能增强",
+    defenseIgnore: "无视防御",
+  },
+  weaponGrid: {
+    mainhand: "主手",
+    subSlot: "副武器",
+    locked: "未解锁",
+    empty: "空槽",
+    activeSummary: "{mainhands}+3x3 生效",
   },
   commands: {
     attackTurn: "攻击回合",
@@ -186,6 +199,36 @@ export const zhCN = {
       seraphic: "天司",
       bonusDamage: "追击伤害",
       defaultAdvantage: "默认克制",
+    },
+  },
+  weapons: {
+    series: {
+      luminous: "极星器风格",
+      optimus: "约定武器风格",
+      revenant: "特殊强化刀风格",
+    },
+    luminousBlade: {
+      name: "白耀剑·仿",
+      skill1: "技能补充",
+      skill2: "技能追击",
+      description1: "技能伤害实例获得补充伤害。",
+      description2: "技能伤害追加一次独立追击实例。",
+    },
+    ephes: {
+      name: "艾菲斯·仿",
+      skill1: "武器技能增强",
+      skill2: "攻刃与暴击",
+      skill3: "暴击补充",
+      description1: "提高可强化武器技能效果。",
+      description2: "提供通常攻刃与暴击。",
+      description3: "暴击时追加补充伤害。",
+    },
+    basara: {
+      name: "霸刀·仿",
+      skill1: "通常补充与无视防御",
+      skill2: "攻刃、连击与追击",
+      description1: "普通攻击获得补充伤害，并少量无视敌方防御。",
+      description2: "提供通常攻刃、连击率与普通攻击追击。",
     },
   },
   skillText: {

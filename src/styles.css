@@ -582,6 +582,95 @@ h3 {
   background: rgba(244, 213, 139, 0.12);
 }
 
+.weapon-grid-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.weapon-grid-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.weapon-grid-summary span,
+.weapon-skill-list li {
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd6dc;
+  font-size: 0.78rem;
+}
+
+.mainhand-grid,
+.sub-weapon-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.mainhand-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sub-weapon-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.weapon-slot {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(143, 215, 199, 0.2);
+  border-radius: 6px;
+  background: rgba(143, 215, 199, 0.06);
+}
+
+.weapon-slot.locked {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  opacity: 0.65;
+}
+
+.weapon-slot span {
+  color: #f4d58b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.weapon-slot select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  color: #eef4f8;
+  background: #15171a;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.weapon-skill-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weapon-skill-list strong,
+.weapon-skill-list small {
+  display: block;
+}
+
+.weapon-skill-list small {
+  margin-top: 4px;
+  color: #aab8c0;
+  line-height: 1.4;
+}
+
 .formula-card h3 {
   color: #f4d58b;
 }

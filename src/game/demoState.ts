@@ -1,73 +1,6 @@
-import type { BattleState, Combatant, Enemy, SkillDefinition, WeaponGrid } from "./types";
+import type { BattleState, Combatant, Enemy, SkillDefinition } from "./types";
 import { t } from "../i18n/zhCN";
-
-export const demoWeaponGrid: WeaponGrid = {
-  name: t.demo.gridName,
-  attack: 22000,
-  modifiers: [
-    { id: "normal-atk", label: t.demo.labels.normalAttack, bucket: "normal", value: 0.25 },
-    { id: "omega-atk", label: t.demo.labels.omegaAttack, bucket: "omega", value: 0 },
-    { id: "ex-atk", label: t.demo.labels.exAttack, bucket: "ex", value: 0.18 },
-    { id: "stamina-atk", label: t.demo.labels.stamina, bucket: "stamina", value: 0 },
-    { id: "enmity-atk", label: t.demo.labels.enmity, bucket: "enmity", value: 0 },
-    { id: "skill-dmg", label: t.demo.labels.skillDamage, bucket: "skillDamage", value: 0 },
-    { id: "ca-dmg", label: t.demo.labels.chargeAttackDamage, bucket: "caDamage", value: 0 },
-    { id: "amplified-dmg", label: t.demo.labels.amplifiedDamage, bucket: "amplified", value: 0 },
-  ],
-  critical: [{ id: "demo-crit", label: t.demo.labels.demoCritical, chance: 0.25, damage: 0.5 }],
-  capUp: [
-    {
-      id: "normal-cap-up",
-      label: t.demo.labels.normalCap,
-      source: "weapon",
-      appliesTo: ["normal", "counter"],
-      value: 0,
-    },
-    {
-      id: "skill-cap-up",
-      label: t.demo.labels.skillCap,
-      source: "weapon",
-      appliesTo: ["skill"],
-      value: 0,
-    },
-    {
-      id: "ca-cap-up",
-      label: t.demo.labels.chargeAttackCap,
-      source: "weapon",
-      appliesTo: ["charge"],
-      value: 0,
-    },
-  ],
-  supplemental: [
-    {
-      id: "normal-supp",
-      label: t.demo.labels.normalSupplemental,
-      amount: 0,
-      appliesTo: ["normal", "counter"],
-      cap: 100_000,
-      condition: "always",
-      sourceType: "weapon",
-    },
-    {
-      id: "skill-supp",
-      label: t.demo.labels.skillSupplemental,
-      amount: 0,
-      appliesTo: ["skill"],
-      cap: 100_000,
-      condition: "always",
-      sourceType: "weapon",
-    },
-    {
-      id: "ca-supp",
-      label: t.demo.labels.chargeAttackSupplemental,
-      amount: 0,
-      appliesTo: ["charge"],
-      cap: 100_000,
-      condition: "always",
-      sourceType: "weapon",
-    },
-  ],
-};
+import { createDemoWeaponGrid } from "./weaponGrid";
 
 export const DEMO_SKILL_VALUES = {
   teamAttackBuff: {
@@ -260,7 +193,7 @@ export function createInitialBattleState(): BattleState {
     turn: 1,
     party: structuredClone(demoParty),
     enemy: structuredClone(demoEnemy),
-    weaponGrid: structuredClone(demoWeaponGrid),
+    weaponGrid: createDemoWeaponGrid(demoParty.length),
     log: [
       {
         id: "battle-start",

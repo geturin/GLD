@@ -174,6 +174,7 @@ function resolveEnemySpecial(state: BattleState, multiplier = 1) {
   const effectiveAttack = state.enemy.attack * Math.max(0.1, 1 - attackDown);
   const damageCut = collectDamageCut(target.statusEffects);
   const damageReduction = collectDamageReduction(target.statusEffects);
+  const effectiveMaxHp = target.maxHp + state.weaponGrid.hp;
   const rawDamage = Math.round(
     effectiveAttack *
       (state.enemy.mode === "overdrive" ? 1.7 : 1.25) *
@@ -188,7 +189,7 @@ function resolveEnemySpecial(state: BattleState, multiplier = 1) {
           hp: Math.max(0, member.hp - rawDamage),
           chargeBar: Math.min(
             100,
-            member.chargeBar + Math.max(5, Math.round((rawDamage / member.maxHp) * 50)),
+            member.chargeBar + Math.max(5, Math.round((rawDamage / effectiveMaxHp) * 50)),
           ),
           counterStacks: member.counterStacks ? member.counterStacks + 1 : member.counterStacks,
         }
@@ -470,7 +471,7 @@ export function attackTurn(state: BattleState): BattleState {
       return;
     }
 
-    const hits = normalHitCount(member, nextState.turn * 71 + index);
+    const hits = normalHitCount(member, nextState.turn * 71 + index, nextState.weaponGrid.multiattack);
     const breakdown = resolveHit({
       attacker: member,
       enemy: nextState.enemy,

@@ -16,6 +16,11 @@ import { attackTurn, executeSkill } from "./game/battleEngine";
 import { createInitialBattleState } from "./game/demoState";
 import { DEFAULT_ADVANTAGE_MULTIPLIER, resolveHit } from "./game/formulas";
 import { describeSkill } from "./game/skillText";
+import {
+  MAINHAND_SLOT_COUNT,
+  WEAPON_CATALOG,
+  recomputeWeaponGrid,
+} from "./game/weaponGrid";
 import type {
   AttackKind,
   BattleState,
@@ -265,6 +270,7 @@ export function App() {
     [battle, selectedMember],
   );
   const enemyHpRate = hpPercent(battle.enemy.hp, battle.enemy.maxHp);
+  const effectiveMaxHp = selectedMember.maxHp + battle.weaponGrid.hp;
 
   function updateSelectedMember(updater: (member: Combatant) => Combatant) {
     setBattle((current) => ({
@@ -289,7 +295,7 @@ export function App() {
       return {
         ...member,
         maxHp,
-        hp: clamp(member.hp, 0, maxHp),
+        hp: clamp(member.hp, 0, maxHp + battle.weaponGrid.hp),
       };
     });
   }
@@ -297,7 +303,7 @@ export function App() {
   function setSelectedHp(value: number) {
     updateSelectedMember((member) => ({
       ...member,
-      hp: clamp(Math.round(value), 0, member.maxHp),
+      hp: clamp(Math.round(value), 0, member.maxHp + battle.weaponGrid.hp),
     }));
   }
 
@@ -323,9 +329,14 @@ export function App() {
       ...current,
       weaponGrid: {
         ...current.weaponGrid,
-        modifiers: current.weaponGrid.modifiers.map((modifier) =>
-          modifier.id === id ? { ...modifier, bucket, value: value / 100 } : modifier,
-        ),
+        modifiers: current.weaponGrid.modifiers.some((modifier) => modifier.id === id)
+          ? current.weaponGrid.modifiers.map((modifier) =>
+              modifier.id === id ? { ...modifier, bucket, value: value / 100 } : modifier,
+            )
+          : [
+              ...current.weaponGrid.modifiers,
+              { id, label: id, bucket, value: value / 100 },
+            ],
       },
       lastActionSummary: t.battle.weaponSkillAdjusted,
     }));
@@ -345,9 +356,14 @@ export function App() {
       ...current,
       weaponGrid: {
         ...current.weaponGrid,
-        capUp: current.weaponGrid.capUp.map((cap) =>
-          cap.id === id ? { ...cap, appliesTo, value: value / 100 } : cap,
-        ),
+        capUp: current.weaponGrid.capUp.some((cap) => cap.id === id)
+          ? current.weaponGrid.capUp.map((cap) =>
+              cap.id === id ? { ...cap, appliesTo, value: value / 100 } : cap,
+            )
+          : [
+              ...current.weaponGrid.capUp,
+              { id, label: id, source: "weapon", appliesTo, value: value / 100 },
+            ],
       },
       lastActionSummary: t.battle.capAdjusted,
     }));
@@ -358,9 +374,21 @@ export function App() {
       ...current,
       weaponGrid: {
         ...current.weaponGrid,
-        supplemental: current.weaponGrid.supplemental.map((rule) =>
-          rule.id === id ? { ...rule, appliesTo, amount: Math.round(value) } : rule,
-        ),
+        supplemental: current.weaponGrid.supplemental.some((rule) => rule.id === id)
+          ? current.weaponGrid.supplemental.map((rule) =>
+              rule.id === id ? { ...rule, appliesTo, amount: Math.round(value) } : rule,
+            )
+          : [
+              ...current.weaponGrid.supplemental,
+              {
+                id,
+                label: id,
+                appliesTo,
+                amount: Math.round(value),
+                condition: "always",
+                sourceType: "weapon",
+              },
+            ],
       },
       lastActionSummary: t.battle.supplementalAdjusted,
     }));
@@ -371,9 +399,19 @@ export function App() {
       ...current,
       weaponGrid: {
         ...current.weaponGrid,
-        critical: current.weaponGrid.critical.map((rule) =>
-          rule.id === "demo-crit" ? { ...rule, [field]: value / 100 } : rule,
-        ),
+        critical: current.weaponGrid.critical.some((rule) => rule.id === "demo-crit")
+          ? current.weaponGrid.critical.map((rule) =>
+              rule.id === "demo-crit" ? { ...rule, [field]: value / 100 } : rule,
+            )
+          : [
+              ...current.weaponGrid.critical,
+              {
+                id: "demo-crit",
+                label: t.demo.labels.demoCritical,
+                chance: field === "chance" ? value / 100 : 0,
+                damage: field === "damage" ? value / 100 : 0.5,
+              },
+            ],
       },
       lastActionSummary: t.battle.criticalAdjusted,
     }));
@@ -400,6 +438,26 @@ export function App() {
   const bonusDamage = percentValue(
     selectedMember.bonusDamage.find((rule) => rule.id === "normal-echo")?.multiplier ?? 0,
   );
+  const activeMainhands = Math.min(MAINHAND_SLOT_COUNT, battle.party.length);
+
+  function equipWeapon(slotType: "mainhand" | "sub", index: number, weaponId: string) {
+    setBattle((current) => {
+      const nextGrid = structuredClone(current.weaponGrid);
+      const slot = weaponId ? { weaponId } : null;
+
+      if (slotType === "mainhand") {
+        nextGrid.mainhands[index] = slot;
+      } else {
+        nextGrid.subSlots[index] = slot;
+      }
+
+      return {
+        ...current,
+        weaponGrid: recomputeWeaponGrid(nextGrid, current.party.length),
+        lastActionSummary: `${t.panels.weaponGrid}已更新`,
+      };
+    });
+  }
 
   return (
     <main className="app-shell">
@@ -446,8 +504,8 @@ export function App() {
                 <span className="bar">
                   <i style={{ width: hpPercent(member.hp, member.maxHp) }} />
                 </span>
-                <span className="stat-row">
-                  <small>{t.battle.hp} {formatNumber(member.hp)}</small>
+                  <span className="stat-row">
+                  <small>{t.battle.hp} {formatNumber(member.hp)} / {formatNumber(member.maxHp + battle.weaponGrid.hp)}</small>
                   <small>{t.battle.advantage}</small>
                 </span>
               </button>
@@ -468,13 +526,10 @@ export function App() {
 
             <FieldGroup title={t.groups.base}>
               <NumberControl label={t.controls.characterAttack} min={1} onChange={setSelectedBaseAttack} step={100} value={selectedMember.baseAttack} />
-              <NumberControl label={t.controls.gridAttack} min={0} onChange={(value) => setBattle((current) => ({
-                ...current,
-                weaponGrid: { ...current.weaponGrid, attack: clamp(Math.round(value), 0, 999999) },
-                lastActionSummary: t.battle.gridAttackAdjusted,
-              }))} step={100} value={battle.weaponGrid.attack} />
+              <NumberControl label={t.controls.weaponAttack} min={0} onChange={() => undefined} step={100} value={battle.weaponGrid.attack} />
+              <NumberControl label={t.controls.weaponHp} min={0} onChange={() => undefined} step={100} value={battle.weaponGrid.hp} />
               <NumberControl label={t.controls.maxHp} min={1} onChange={setSelectedMaxHp} step={100} value={selectedMember.maxHp} />
-              <RangeControl label={t.controls.currentHp} max={selectedMember.maxHp} onChange={setSelectedHp} step={100} suffix="" value={selectedMember.hp} />
+              <RangeControl label={t.controls.currentHp} max={effectiveMaxHp} onChange={setSelectedHp} step={100} suffix="" value={selectedMember.hp} />
               <RangeControl label={t.controls.chargeBar} max={100} onChange={setSelectedChargeBar} step={5} value={selectedMember.chargeBar} />
               <RangeControl label={t.controls.doubleAttack} max={100} onChange={(value) => setSelectedMultiattack("double", value)} value={Math.round(selectedMember.multiattack.double * 100)} />
               <RangeControl label={t.controls.tripleAttack} max={100} onChange={(value) => setSelectedMultiattack("triple", value)} value={Math.round(selectedMember.multiattack.triple * 100)} />
@@ -632,6 +687,70 @@ export function App() {
         </section>
 
         <aside className="panel systems-panel">
+          <div className="panel-heading">
+            <Sparkles size={18} />
+            <h2>{t.panels.weaponGrid}</h2>
+          </div>
+          <section className="weapon-grid-panel">
+            <div className="weapon-grid-summary">
+              <span>
+                {t.weaponGrid.activeSummary.replace("{mainhands}", String(activeMainhands))}
+              </span>
+              <span>{t.controls.weaponAttack} {formatNumber(battle.weaponGrid.attack)}</span>
+              <span>{t.controls.weaponHp} {formatNumber(battle.weaponGrid.hp)}</span>
+              <span>{t.controls.skillBoost} {percentValue(battle.weaponGrid.skillBoost)}%</span>
+              <span>{t.controls.defenseIgnore} {percentValue(battle.weaponGrid.defenseIgnore)}%</span>
+            </div>
+            <div className="mainhand-grid">
+              {battle.weaponGrid.mainhands.map((slot, index) => {
+                const locked = index >= activeMainhands;
+                return (
+                  <label className={`weapon-slot ${locked ? "locked" : ""}`} key={`main-${index}`}>
+                    <span>{t.weaponGrid.mainhand} {index + 1}</span>
+                    <select
+                      disabled={locked}
+                      onChange={(event) => equipWeapon("mainhand", index, event.target.value)}
+                      value={slot?.weaponId ?? ""}
+                    >
+                      <option value="">{locked ? t.weaponGrid.locked : t.weaponGrid.empty}</option>
+                      {WEAPON_CATALOG.map((weapon) => (
+                        <option key={weapon.id} value={weapon.id}>
+                          {weapon.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="sub-weapon-grid">
+              {battle.weaponGrid.subSlots.map((slot, index) => (
+                <label className="weapon-slot" key={`sub-${index}`}>
+                  <span>{t.weaponGrid.subSlot} {index + 1}</span>
+                  <select
+                    onChange={(event) => equipWeapon("sub", index, event.target.value)}
+                    value={slot?.weaponId ?? ""}
+                  >
+                    <option value="">{t.weaponGrid.empty}</option>
+                    {WEAPON_CATALOG.map((weapon) => (
+                      <option key={weapon.id} value={weapon.id}>
+                        {weapon.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+            <ul className="weapon-skill-list">
+              {WEAPON_CATALOG.map((weapon) => (
+                <li key={weapon.id}>
+                  <strong>{weapon.name}</strong>
+                  <small>{weapon.series} / {weapon.skills.map((skill) => skill.label).join("、")}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <div className="panel-heading">
             <Sparkles size={18} />
             <h2>{t.panels.systems}</h2>

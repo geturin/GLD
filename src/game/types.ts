@@ -36,6 +36,7 @@ export interface ScalarModifier {
   label: string;
   bucket: ModifierBucket;
   value: number;
+  boostable?: boolean;
 }
 
 export interface DamageCapModifier {
@@ -44,6 +45,7 @@ export interface DamageCapModifier {
   source: CapSource;
   appliesTo: AttackKind[];
   value: number;
+  boostable?: boolean;
 }
 
 export interface CriticalRule {
@@ -51,6 +53,7 @@ export interface CriticalRule {
   label: string;
   chance: number;
   damage: number;
+  boostable?: boolean;
 }
 
 export interface BonusDamageRule {
@@ -59,6 +62,7 @@ export interface BonusDamageRule {
   multiplier: number;
   appliesTo?: AttackKind[];
   cap?: number;
+  boostable?: boolean;
 }
 
 export interface SupplementalRule {
@@ -69,6 +73,7 @@ export interface SupplementalRule {
   cap?: number;
   condition?: "always" | "critical";
   sourceType?: "weapon" | "skill" | "status" | "passive";
+  boostable?: boolean;
 }
 
 export interface MultiattackProfile {
@@ -142,11 +147,51 @@ export interface Combatant {
 
 export interface WeaponGrid {
   name: string;
+  mainhands: Array<EquippedWeapon | null>;
+  subSlots: Array<EquippedWeapon | null>;
+  activeMainhandCount: number;
   attack: number;
+  hp: number;
   modifiers: ScalarModifier[];
   critical: CriticalRule[];
   capUp: DamageCapModifier[];
   supplemental: SupplementalRule[];
+  bonusDamage: BonusDamageRule[];
+  multiattack: Partial<MultiattackProfile>;
+  defenseIgnore: number;
+  skillBoost: number;
+}
+
+export interface EquippedWeapon {
+  weaponId: string;
+}
+
+export interface WeaponDefinition {
+  id: string;
+  name: string;
+  series: string;
+  weaponType: "sword" | "katana";
+  attack: number;
+  hp: number;
+  skills: WeaponSkill[];
+}
+
+export interface WeaponSkill {
+  id: string;
+  label: string;
+  description: string;
+  effects: WeaponSkillEffects;
+}
+
+export interface WeaponSkillEffects {
+  modifiers?: ScalarModifier[];
+  critical?: CriticalRule[];
+  capUp?: DamageCapModifier[];
+  supplemental?: SupplementalRule[];
+  bonusDamage?: BonusDamageRule[];
+  multiattack?: Partial<MultiattackProfile>;
+  defenseIgnore?: number;
+  skillBoost?: number;
 }
 
 export interface Enemy {
