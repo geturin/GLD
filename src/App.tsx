@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import {
   Activity,
@@ -15,7 +15,6 @@ import {
   createDefaultDataSets,
   createInitialBattleState,
 } from "./game/demoState";
-import { DEFAULT_ADVANTAGE_MULTIPLIER, resolveHit } from "./game/formulas";
 import { describeSkill } from "./game/skillText";
 import {
   MAINHAND_SLOT_COUNT,
@@ -23,7 +22,6 @@ import {
 } from "./game/weaponGrid";
 import type {
   AttackKind,
-  BattleState,
   Combatant,
   Enemy,
   ModifierBucket,
@@ -42,19 +40,6 @@ function hpPercent(current: number, max: number) {
 
 function spriteAlt(name: string) {
   return formatTemplate(t.battleScene.spriteAlt, { name });
-}
-
-function expectedNormalDamage(state: BattleState, member: Combatant) {
-  return resolveHit({
-    attacker: member,
-    enemy: state.enemy,
-    weaponGrid: state.weaponGrid,
-    kind: "normal",
-    hitMultiplier: 1,
-    cap: 440000,
-    criticalSeed: state.turn * 31,
-    randomVariance: state.options.randomVariance,
-  });
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -345,10 +330,6 @@ export function App() {
 
   const selectedMember =
     battle.party.find((member) => member.id === selectedMemberId) ?? battle.party[0];
-  const selectedPreview = useMemo(
-    () => expectedNormalDamage(battle, selectedMember),
-    [battle, selectedMember],
-  );
   const enemyHpRate = hpPercent(battle.enemy.hp, battle.enemy.maxHp);
   const effectiveMaxHp = selectedMember.maxHp + battle.weaponGrid.hp;
 
@@ -744,13 +725,19 @@ export function App() {
             <div className="enemy-overview" aria-label={t.battleScene.enemyStatus}>
               <div>
                 <strong>{battle.enemy.name}</strong>
-                <small>
-                  {t.battleScene.mode} {battle.enemy.mode} / {t.battleScene.ct} {battle.enemy.chargeDiamonds}/{battle.enemy.maxChargeDiamonds}
-                </small>
+                <small>{t.battleScene.mode} {battle.enemy.mode} / {t.battleScene.ct}</small>
               </div>
               <div className="enemy-mini-hp">
-                <span>{formatNumber(battle.enemy.hp)} / {formatNumber(battle.enemy.maxHp)}</span>
+                <span>{t.battle.hp}</span>
                 <i style={{ width: enemyHpRate }} />
+              </div>
+              <div className="charge-diamonds" aria-label={t.battle.chargeDiamond}>
+                {Array.from({ length: battle.enemy.maxChargeDiamonds }, (_, index) => (
+                  <i
+                    className={index < battle.enemy.chargeDiamonds ? "filled" : ""}
+                    key={`diamond-${index}`}
+                  />
+                ))}
               </div>
             </div>
 
@@ -765,13 +752,14 @@ export function App() {
               ) : null}
             </div>
 
-            <div className="enemy-status-board">
+            <details className="enemy-status-drawer">
+              <summary>{battle.enemy.name} {t.panels.statusEffects}</summary>
               <StatusList
                 effects={battle.enemy.statusEffects}
                 emptyText={t.battle.noStatusEffects}
                 title={`${battle.enemy.name} ${t.panels.statusEffects}`}
               />
-            </div>
+            </details>
 
             <div className="party-window">
               {battle.party.map((member) => (
@@ -781,9 +769,12 @@ export function App() {
                   onClick={() => setSelectedMemberId(member.id)}
                   type="button"
                 >
+                  {member.spriteUrl ? (
+                    <img alt={spriteAlt(member.name)} src={member.spriteUrl} />
+                  ) : null}
                   <strong>{member.name}</strong>
                   <span>
-                    {t.battle.hp} {formatNumber(member.hp)}
+                    {t.battle.hp}
                     <b>CA {member.chargeBar}%</b>
                   </span>
                   <i style={{ width: hpPercent(member.hp, member.maxHp + battle.weaponGrid.hp) }} />
@@ -812,6 +803,14 @@ export function App() {
                   </button>
                 ))}
               </div>
+              <details className="member-status-drawer">
+                <summary>{selectedMember.name} {t.panels.statusEffects}</summary>
+                <StatusList
+                  effects={selectedMember.statusEffects}
+                  emptyText={t.battle.noStatusEffects}
+                  title={`${selectedMember.name} ${t.panels.statusEffects}`}
+                />
+              </details>
             </div>
 
             <div className="screen-actions">
@@ -825,12 +824,6 @@ export function App() {
               </button>
             </div>
 
-            <div className="preview-ribbon" aria-label={t.battleScene.previewPanel}>
-              <span>{t.preview.base} {formatNumber(selectedPreview.baseDamage)}</span>
-              <span>{t.preview.advantage} x{DEFAULT_ADVANTAGE_MULTIPLIER}</span>
-              <span>{t.preview.cap} {formatNumber(selectedPreview.cap)}</span>
-              <span>{t.preview.hit} {formatNumber(selectedPreview.finalDamage)}</span>
-            </div>
           </section>
         </section>
 

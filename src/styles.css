@@ -121,10 +121,20 @@ h3 {
 
 .combat-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 380px) minmax(420px, 1fr) minmax(250px, 330px);
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
   gap: 16px;
-  max-width: 1540px;
+  max-width: 1320px;
   margin: 0 auto;
+}
+
+.battle-stage {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.party-panel,
+.systems-panel {
+  grid-row: 2;
 }
 
 .panel,
@@ -430,10 +440,10 @@ h3 {
   position: relative;
   isolation: isolate;
   width: 100%;
-  max-width: 860px;
+  max-width: 1180px;
   margin: 0 auto;
-  aspect-ratio: 4 / 3;
-  min-height: 520px;
+  aspect-ratio: 16 / 9;
+  min-height: 610px;
   overflow: hidden;
   border: 5px solid #d4c58f;
   border-radius: 8px;
@@ -583,7 +593,7 @@ h3 {
 
 .enemy-stage {
   position: absolute;
-  inset: 82px 8% 176px;
+  inset: 96px 8% 172px;
   display: grid;
   place-items: center;
 }
@@ -600,23 +610,36 @@ h3 {
 
 .dungeon-enemy-sprite {
   position: relative;
-  width: clamp(220px, 36vw, 390px);
-  max-height: 330px;
+  width: clamp(250px, 30vw, 420px);
+  max-height: 360px;
   object-fit: contain;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   filter: drop-shadow(0 16px 0 rgba(0, 0, 0, 0.26));
 }
 
-.enemy-status-board {
+.enemy-status-drawer {
   position: absolute;
   top: 96px;
   left: 18px;
   z-index: 3;
-  width: min(31%, 260px);
+  width: min(30%, 260px);
+  color: #f5e5a6;
 }
 
-.enemy-status-board .status-panel {
+.enemy-status-drawer summary,
+.member-status-drawer summary {
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 2px solid rgba(245, 229, 166, 0.7);
+  background: rgba(8, 22, 22, 0.78);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.enemy-status-drawer .status-panel,
+.member-status-drawer .status-panel {
   margin-top: 0;
   max-height: 138px;
   overflow: auto;
@@ -637,8 +660,9 @@ h3 {
 .party-command-card {
   position: relative;
   display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
   gap: 5px;
-  min-height: 58px;
+  min-height: 66px;
   overflow: hidden;
   padding: 7px 9px 9px;
   border: 2px solid rgba(18, 52, 54, 0.95);
@@ -661,7 +685,19 @@ h3 {
   z-index: 1;
 }
 
+.party-command-card img {
+  grid-row: span 2;
+  width: 42px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 .party-command-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.84rem;
 }
 
@@ -690,9 +726,9 @@ h3 {
 .skill-command-window {
   position: absolute;
   right: 18px;
-  bottom: 96px;
+  bottom: 108px;
   z-index: 3;
-  width: min(52%, 430px);
+  width: min(48%, 430px);
   padding: 10px;
   border: 2px solid rgba(245, 229, 166, 0.76);
   background: rgba(16, 26, 27, 0.86);
@@ -716,6 +752,10 @@ h3 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
+}
+
+.member-status-drawer {
+  margin-top: 8px;
 }
 
 .compact-skill-grid button {
@@ -752,8 +792,8 @@ h3 {
 
 .screen-actions {
   position: absolute;
-  right: 18px;
-  bottom: 158px;
+  left: 18px;
+  bottom: 108px;
   z-index: 3;
   display: flex;
   flex-wrap: wrap;
@@ -780,25 +820,22 @@ h3 {
   font-weight: 900;
 }
 
-.preview-ribbon {
-  position: absolute;
-  bottom: 96px;
-  left: 18px;
-  z-index: 3;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px 10px;
-  width: min(39%, 320px);
-  padding: 9px;
-  border: 2px solid rgba(18, 52, 54, 0.95);
-  background: rgba(8, 22, 22, 0.76);
+.charge-diamonds {
+  display: flex;
+  gap: 5px;
 }
 
-.preview-ribbon span {
-  color: #f5e5a6;
-  font-size: 0.72rem;
-  font-weight: 900;
-  white-space: nowrap;
+.charge-diamonds i {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(245, 229, 166, 0.82);
+  transform: rotate(45deg);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.charge-diamonds i.filled {
+  background: #f5e5a6;
 }
 
 .enemy-hud {
@@ -1437,6 +1474,13 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  .battle-stage,
+  .party-panel,
+  .systems-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
   .battle-stage {
     min-height: auto;
   }
@@ -1487,10 +1531,9 @@ h3 {
 
   .battle-message,
   .enemy-overview,
-  .enemy-status-board,
+  .enemy-status-drawer,
   .skill-command-window,
   .screen-actions,
-  .preview-ribbon,
   .party-window {
     right: 12px;
     left: 12px;
@@ -1505,7 +1548,7 @@ h3 {
     top: 88px;
   }
 
-  .enemy-status-board {
+  .enemy-status-drawer {
     top: 172px;
   }
 
@@ -1523,11 +1566,6 @@ h3 {
 
   .skill-command-window {
     bottom: 126px;
-  }
-
-  .preview-ribbon {
-    bottom: 62px;
-    grid-template-columns: 1fr 1fr;
   }
 
   .party-window {
