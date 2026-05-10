@@ -235,6 +235,10 @@ export interface BattleLogEntry {
   action: string;
   detail: string;
   damage?: number;
+  targetId?: string;
+  targetType?: "enemy" | "party";
+  feedback?: "damage" | "buff" | "debuff";
+  hitDamages?: number[];
 }
 
 export interface DamageContext {

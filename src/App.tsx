@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   Activity,
   Gem,
@@ -22,6 +22,7 @@ import {
 } from "./game/weaponGrid";
 import type {
   AttackKind,
+  BattleLogEntry,
   Combatant,
   Enemy,
   ModifierBucket,
@@ -254,6 +255,14 @@ type DataEditorKind = "weapons" | "characters" | "enemies";
 
 const editorKinds: DataEditorKind[] = ["weapons", "characters", "enemies"];
 
+interface BattleFeedback {
+  id: number;
+  kind: "damage" | "buff" | "debuff";
+  targetId?: string;
+  targetType?: "enemy" | "party";
+  hitDamages: number[];
+}
+
 function createBlankWeapon(): WeaponDefinition {
   return {
     id: `weapon-${Date.now()}`,
@@ -320,6 +329,7 @@ function itemName(item: { id: string; name: string }) {
 export function App() {
   const [dataSets, setDataSets] = useState(createDefaultDataSets);
   const [battle, setBattle] = useState(() => createInitialBattleState(dataSets));
+  const [battleFeedback, setBattleFeedback] = useState<BattleFeedback | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState(battle.party[0].id);
   const [editorKind, setEditorKind] = useState<DataEditorKind>("weapons");
   const [editorId, setEditorId] = useState(dataSets.weapons[0]?.id ?? "");
@@ -332,6 +342,41 @@ export function App() {
     battle.party.find((member) => member.id === selectedMemberId) ?? battle.party[0];
   const enemyHpRate = hpPercent(battle.enemy.hp, battle.enemy.maxHp);
   const effectiveMaxHp = selectedMember.maxHp + battle.weaponGrid.hp;
+
+  function feedbackFromLogs(logs: BattleLogEntry[]) {
+    const reversedLogs = [...logs].reverse();
+    const damageLog = reversedLogs.find((entry) => entry.feedback === "damage" && entry.hitDamages?.length);
+    if (damageLog) {
+      return {
+        id: Date.now(),
+        kind: "damage" as const,
+        targetId: damageLog.targetId,
+        targetType: damageLog.targetType,
+        hitDamages: damageLog.hitDamages ?? [],
+      };
+    }
+
+    const statusLog = reversedLogs.find((entry) => entry.feedback === "buff" || entry.feedback === "debuff");
+    if (statusLog?.feedback === "buff" || statusLog?.feedback === "debuff") {
+      return {
+        id: Date.now(),
+        kind: statusLog.feedback,
+        targetId: statusLog.targetId,
+        targetType: statusLog.targetType,
+        hitDamages: [],
+      };
+    }
+
+    return null;
+  }
+
+  function applyBattleAction(action: (current: typeof battle) => typeof battle) {
+    setBattle((current) => {
+      const next = action(current);
+      setBattleFeedback(feedbackFromLogs(next.log.slice(current.log.length)));
+      return next;
+    });
+  }
 
   function updateSelectedMember(updater: (member: Combatant) => Combatant) {
     setBattle((current) => ({
@@ -505,6 +550,7 @@ export function App() {
   function resetBattle(nextDataSets = dataSets) {
     const nextBattle = createInitialBattleState(nextDataSets);
     setBattle(nextBattle);
+    setBattleFeedback(null);
     setSelectedMemberId(nextBattle.party[0]?.id ?? "");
   }
 
@@ -717,11 +763,6 @@ export function App() {
             <div className="screen-corner bottom-left" />
             <div className="screen-corner bottom-right" />
 
-            <div className="battle-message">
-              <span>{String(battle.turn).padStart(2, "0")}</span>
-              <p>{battle.lastActionSummary}</p>
-            </div>
-
             <div className="enemy-overview" aria-label={t.battleScene.enemyStatus}>
               <div>
                 <strong>{battle.enemy.name}</strong>
@@ -741,7 +782,14 @@ export function App() {
               </div>
             </div>
 
-            <div className="enemy-stage">
+            <div
+              className={`enemy-stage ${
+                battleFeedback?.targetType === "enemy" && battleFeedback.targetId === battle.enemy.id
+                  ? battleFeedback.kind
+                  : ""
+              }`}
+              key={`enemy-feedback-${battleFeedback?.targetType === "enemy" ? battleFeedback.id : "idle"}`}
+            >
               <div className="enemy-shadow" />
               {battle.enemy.spriteUrl ? (
                 <img
@@ -749,6 +797,18 @@ export function App() {
                   className="dungeon-enemy-sprite"
                   src={battle.enemy.spriteUrl}
                 />
+              ) : null}
+              {battleFeedback?.targetType === "enemy" && battleFeedback.targetId === battle.enemy.id ? (
+                <div className="floating-damage-layer">
+                  {battleFeedback.hitDamages.map((damage, index) => (
+                    <span
+                      key={`${battleFeedback.id}-${index}`}
+                      style={{ "--hit-index": index } as CSSProperties}
+                    >
+                      {formatNumber(damage)}
+                    </span>
+                  ))}
+                </div>
               ) : null}
             </div>
 
@@ -764,7 +824,11 @@ export function App() {
             <div className="party-window">
               {battle.party.map((member) => (
                 <button
-                  className={`party-command-card ${member.id === selectedMember.id ? "selected" : ""}`}
+                  className={`party-command-card ${member.id === selectedMember.id ? "selected" : ""} ${
+                    battleFeedback?.targetType === "party" && battleFeedback.targetId === member.id
+                      ? battleFeedback.kind
+                      : ""
+                  }`}
                   key={member.id}
                   onClick={() => setSelectedMemberId(member.id)}
                   type="button"
@@ -778,6 +842,18 @@ export function App() {
                     <b>CA {member.chargeBar}%</b>
                   </span>
                   <i style={{ width: hpPercent(member.hp, member.maxHp + battle.weaponGrid.hp) }} />
+                  {battleFeedback?.targetType === "party" && battleFeedback.targetId === member.id ? (
+                    <span className="card-floating-damage">
+                      {battleFeedback.hitDamages.map((damage, index) => (
+                        <b
+                          key={`${battleFeedback.id}-${member.id}-${index}`}
+                          style={{ "--hit-index": index } as CSSProperties}
+                        >
+                          {formatNumber(damage)}
+                        </b>
+                      ))}
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -793,7 +869,7 @@ export function App() {
                     disabled={skill.remainingCooldown > 0}
                     key={skill.id}
                     onClick={() =>
-                      setBattle((current) => executeSkill(current, selectedMember.id, skill.id))
+                      applyBattleAction((current) => executeSkill(current, selectedMember.id, skill.id))
                     }
                     title={describeSkill(skill)}
                     type="button"
@@ -814,7 +890,7 @@ export function App() {
             </div>
 
             <div className="screen-actions">
-              <button className="primary-command" onClick={() => setBattle(attackTurn)} type="button">
+              <button className="primary-command" onClick={() => applyBattleAction(attackTurn)} type="button">
                 <Swords size={18} />
                 {t.commands.attackTurn}
               </button>

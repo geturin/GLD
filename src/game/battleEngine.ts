@@ -29,6 +29,7 @@ function makeLog(
   action: string,
   detail: string,
   damage?: number,
+  feedback?: Partial<BattleLogEntry>,
 ): BattleLogEntry {
   return {
     id: `${state.turn}-${state.log.length}-${actor}-${action}`,
@@ -37,7 +38,22 @@ function makeLog(
     action,
     detail,
     damage,
+    ...feedback,
   };
+}
+
+function splitDamage(damage: number, count: number) {
+  if (count <= 1) {
+    return [Math.round(damage)];
+  }
+
+  const base = Math.floor(damage / count);
+  const remainder = Math.round(damage - base * count);
+  return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
+}
+
+function hitDamagesFromBreakdown(breakdown: { hitCount: number; instances: { damage: number }[] }) {
+  return breakdown.instances.flatMap((instance) => splitDamage(instance.damage, breakdown.hitCount));
 }
 
 function tickStatus(effect: StatusEffect) {
@@ -211,6 +227,12 @@ function resolveEnemySpecial(state: BattleState, multiplier = 1) {
           target: target.name,
         }),
         rawDamage,
+        {
+          feedback: "damage",
+          targetId: target.id,
+          targetType: "party",
+          hitDamages: [rawDamage],
+        },
       ),
     ],
   };
@@ -253,6 +275,12 @@ function resolveCounters(state: BattleState) {
             hits: breakdown.hitCount,
           }),
           breakdown.finalDamage,
+          {
+            feedback: "damage",
+            targetId: current.enemy.id,
+            targetType: "enemy",
+            hitDamages: hitDamagesFromBreakdown(breakdown),
+          },
         ),
       ],
     };
@@ -376,18 +404,36 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
           hits: hitCount,
         }),
         totalDamage,
+        {
+          feedback: "damage",
+          targetId: nextState.enemy.id,
+          targetType: "enemy",
+          hitDamages: hitDamagesFromBreakdown(breakdown),
+        },
       ),
     );
   }
 
   if (skill.kind === "buff" && skill.target === "party") {
     nextState.party = applyPartyStatus(nextState.party, skill.applies ?? []);
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.partyBuffApplied));
+    nextState.log.push(
+      makeLog(nextState, nextActor.name, skill.label, t.battle.partyBuffApplied, undefined, {
+        feedback: "buff",
+        targetId: nextActor.id,
+        targetType: "party",
+      }),
+    );
   }
 
   if (skill.kind === "buff" && skill.target === "self") {
     nextState.party = applySelfStatus(nextState.party, actorId, skill.applies ?? []);
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.selfBuffApplied));
+    nextState.log.push(
+      makeLog(nextState, nextActor.name, skill.label, t.battle.selfBuffApplied, undefined, {
+        feedback: "buff",
+        targetId: nextActor.id,
+        targetType: "party",
+      }),
+    );
   }
 
   if (skill.kind === "debuff") {
@@ -401,6 +447,14 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
         nextActor.name,
         skill.label,
         landedEffects.length > 0 ? t.battle.enemyDebuffed : "弱体未命中。",
+        undefined,
+        landedEffects.length > 0
+          ? {
+              feedback: "debuff",
+              targetId: nextState.enemy.id,
+              targetType: "enemy",
+            }
+          : undefined,
       ),
     );
   }
@@ -461,11 +515,20 @@ export function attackTurn(state: BattleState): BattleState {
           nextState,
           member.name,
           member.chargeAttack.label,
-        format(t.battle.chargeAttackDetail, {
-          damage: damage.toLocaleString(),
-          notes: breakdown.notes.join(" / "),
-        }),
+          format(t.battle.chargeAttackDetail, {
+            damage: damage.toLocaleString(),
+            notes: breakdown.notes.join(" / "),
+          }),
           damage,
+          {
+            feedback: "damage",
+            targetId: nextState.enemy.id,
+            targetType: "enemy",
+            hitDamages: [
+              ...hitDamagesFromBreakdown(breakdown),
+              ...(member.chargeAttack.fixedDamage > 0 ? [member.chargeAttack.fixedDamage] : []),
+            ],
+          },
         ),
       );
       return;
@@ -499,6 +562,12 @@ export function attackTurn(state: BattleState): BattleState {
           notes: breakdown.notes.join(" / "),
         }),
         breakdown.finalDamage,
+        {
+          feedback: "damage",
+          targetId: nextState.enemy.id,
+          targetType: "enemy",
+          hitDamages: hitDamagesFromBreakdown(breakdown),
+        },
       ),
     );
   });
@@ -515,6 +584,12 @@ export function attackTurn(state: BattleState): BattleState {
         format(t.battle.chainBurst, { count: chainCount }),
         format(t.battle.chainBurstDetail, { damage: chainDamage.toLocaleString() }),
         chainDamage,
+        {
+          feedback: "damage",
+          targetId: nextState.enemy.id,
+          targetType: "enemy",
+          hitDamages: [chainDamage],
+        },
       ),
     );
   }
