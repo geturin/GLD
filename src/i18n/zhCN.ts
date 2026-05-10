@@ -14,6 +14,8 @@ export const zhCN = {
     skills: "技能",
     systems: "系统",
     battleLog: "战斗日志",
+    buffs: "Buff",
+    debuffs: "Debuff",
   },
   groups: {
     base: "基础",
@@ -105,6 +107,18 @@ export const zhCN = {
     noCritical: "未暴击",
     critical: "暴击 x{value}",
     capNote: "上限 {value}",
+    noBuffs: "当前没有 Buff",
+    noDebuffs: "当前没有 Debuff",
+    remainingTurns: "剩余 {turns}T",
+  },
+  status: {
+    attackDown: "攻击力下降 {value}",
+    defenseDown: "防御力下降 {value}",
+    modifier: "{label} {value}",
+    capUp: "{label} {value}",
+    supplemental: "{label} +{value}",
+    multiattackDouble: "DA +{value}",
+    multiattackTriple: "TA +{value}",
   },
   formula: {
     title: "公式结构",

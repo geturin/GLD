@@ -16,7 +16,13 @@ import { attackTurn, executeSkill } from "./game/battleEngine";
 import { createInitialBattleState } from "./game/demoState";
 import { DEFAULT_ADVANTAGE_MULTIPLIER, resolveHit } from "./game/formulas";
 import { describeSkill } from "./game/skillText";
-import type { AttackKind, BattleState, Combatant, ModifierBucket } from "./game/types";
+import type {
+  AttackKind,
+  BattleState,
+  Combatant,
+  ModifierBucket,
+  StatusEffect,
+} from "./game/types";
 import { t } from "./i18n/zhCN";
 
 function formatNumber(value: number) {
@@ -50,6 +56,92 @@ function readNumber(value: string) {
 
 function percentValue(value: number) {
   return Math.round(value * 100);
+}
+
+function formatTemplate(template: string, values: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
+}
+
+function statusDetails(effect: StatusEffect) {
+  const details = [
+    ...(effect.attackDown
+      ? [formatTemplate(t.status.attackDown, { value: `${percentValue(effect.attackDown)}%` })]
+      : []),
+    ...(effect.defenseDown
+      ? [formatTemplate(t.status.defenseDown, { value: `${percentValue(effect.defenseDown)}%` })]
+      : []),
+    ...(effect.modifiers ?? []).map((modifier) =>
+      formatTemplate(t.status.modifier, {
+        label: modifier.label,
+        value: `${percentValue(modifier.value)}%`,
+      }),
+    ),
+    ...(effect.capUp ?? []).map((cap) =>
+      formatTemplate(t.status.capUp, {
+        label: cap.label,
+        value: `${percentValue(cap.value)}%`,
+      }),
+    ),
+    ...(effect.supplemental ?? []).map((rule) =>
+      formatTemplate(t.status.supplemental, {
+        label: rule.label,
+        value: formatNumber(rule.amount),
+      }),
+    ),
+    ...(effect.multiattack?.double
+      ? [
+          formatTemplate(t.status.multiattackDouble, {
+            value: `${percentValue(effect.multiattack.double)}%`,
+          }),
+        ]
+      : []),
+    ...(effect.multiattack?.triple
+      ? [
+          formatTemplate(t.status.multiattackTriple, {
+            value: `${percentValue(effect.multiattack.triple)}%`,
+          }),
+        ]
+      : []),
+  ];
+
+  return details.join(" / ");
+}
+
+function StatusList({
+  effects,
+  emptyText,
+  title,
+  tone,
+}: {
+  effects: StatusEffect[];
+  emptyText: string;
+  title: string;
+  tone: "buff" | "debuff";
+}) {
+  return (
+    <section className={`status-panel ${tone}`}>
+      <h3>{title}</h3>
+      {effects.length === 0 ? (
+        <p>{emptyText}</p>
+      ) : (
+        <ul>
+          {effects.map((effect) => (
+            <li key={`${effect.id}-${effect.duration}`}>
+              <span>
+                <strong>{effect.label}</strong>
+                <em>
+                  {formatTemplate(t.battle.remainingTurns, {
+                    turns: effect.duration,
+                  })}
+                </em>
+              </span>
+              <small>{statusDetails(effect)}</small>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 function FieldGroup({
@@ -331,6 +423,13 @@ export function App() {
             ))}
           </div>
 
+          <StatusList
+            effects={selectedMember.statusEffects}
+            emptyText={t.battle.noBuffs}
+            title={t.panels.buffs}
+            tone="buff"
+          />
+
           <section className="stat-dashboard" aria-label={`${selectedMember.name}${t.panels.damageLab}`}>
             <div className="section-title compact-title">
               <Activity size={18} />
@@ -416,6 +515,12 @@ export function App() {
               <span>{formatNumber(battle.enemy.hp)} {t.battle.hp}</span>
               <i style={{ width: enemyHpRate }} />
             </div>
+            <StatusList
+              effects={battle.enemy.statusEffects}
+              emptyText={t.battle.noDebuffs}
+              title={t.panels.debuffs}
+              tone="debuff"
+            />
           </section>
 
           <section className="command-deck" aria-label="战斗指令">

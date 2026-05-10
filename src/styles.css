@@ -232,6 +232,70 @@ h3 {
   justify-content: space-between;
 }
 
+.status-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.status-panel h3 {
+  margin-bottom: 0;
+  color: #f4d58b;
+  font-size: 0.86rem;
+}
+
+.status-panel p {
+  margin-bottom: 0;
+  color: #87959e;
+  font-size: 0.82rem;
+}
+
+.status-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-panel li {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border-left: 3px solid #8fd7c7;
+  border-radius: 6px;
+  background: rgba(143, 215, 199, 0.08);
+}
+
+.status-panel.debuff li {
+  border-left-color: #e65f5c;
+  background: rgba(230, 95, 92, 0.08);
+}
+
+.status-panel span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.status-panel em {
+  color: #f4d58b;
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-panel small {
+  color: #cbd6dc;
+  line-height: 1.4;
+}
+
 .stat-dashboard {
   display: grid;
   gap: 12px;
