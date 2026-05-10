@@ -2,15 +2,12 @@ import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Activity,
-  Axe,
-  Flame,
   Gem,
   Map,
   RotateCcw,
   Shield,
   Sparkles,
   Swords,
-  Zap,
 } from "lucide-react";
 import { attackTurn, executeSkill } from "./game/battleEngine";
 import {
@@ -733,41 +730,42 @@ export function App() {
         </aside>
 
         <section className="battle-stage" aria-label={t.battleScene.aria}>
-          <section className="enemy-hud" aria-label={t.battleScene.enemyStatus}>
-            <div className="enemy-hud-main">
-              <span className="turn-chip">{t.battle.turn} {battle.turn}</span>
-              <div>
-                <h2>{battle.enemy.name}</h2>
-                <p>
-                  {t.battleScene.mode} {battle.enemy.mode} / {t.battle.defense} {battle.enemy.defense} / {t.battleScene.ct} {battle.enemy.chargeDiamonds}/{battle.enemy.maxChargeDiamonds}
-                </p>
-              </div>
+          <section className="dungeon-battle-screen" aria-label={t.battleScene.field}>
+            <div className="screen-corner top-left" />
+            <div className="screen-corner top-right" />
+            <div className="screen-corner bottom-left" />
+            <div className="screen-corner bottom-right" />
+
+            <div className="battle-message">
+              <span>{String(battle.turn).padStart(2, "0")}</span>
+              <p>{battle.lastActionSummary}</p>
             </div>
-            <div className="enemy-hp-block">
-              <div className="large-hp">
-                <span>{formatNumber(battle.enemy.hp)} / {formatNumber(battle.enemy.maxHp)} {t.battle.hp}</span>
+
+            <div className="enemy-overview" aria-label={t.battleScene.enemyStatus}>
+              <div>
+                <strong>{battle.enemy.name}</strong>
+                <small>
+                  {t.battleScene.mode} {battle.enemy.mode} / {t.battleScene.ct} {battle.enemy.chargeDiamonds}/{battle.enemy.maxChargeDiamonds}
+                </small>
+              </div>
+              <div className="enemy-mini-hp">
+                <span>{formatNumber(battle.enemy.hp)} / {formatNumber(battle.enemy.maxHp)}</span>
                 <i style={{ width: enemyHpRate }} />
               </div>
-              <div className="mode-gauge">
-                <span>{t.battleScene.modeGauge}</span>
-                <i style={{ width: hpPercent(battle.enemy.modeGauge, 1) }} />
-              </div>
             </div>
-            <div className={`mode-badge ${battle.enemy.mode}`}>
-              <Activity size={18} />
-              {battle.enemy.mode}
-            </div>
-          </section>
 
-          <section className="pixel-battlefield" aria-label={t.battleScene.field}>
-            <div className="combat-side enemy-side">
+            <div className="enemy-stage">
+              <div className="enemy-shadow" />
               {battle.enemy.spriteUrl ? (
                 <img
                   alt={spriteAlt(battle.enemy.name)}
-                  className="battle-sprite enemy-sprite"
+                  className="dungeon-enemy-sprite"
                   src={battle.enemy.spriteUrl}
                 />
               ) : null}
+            </div>
+
+            <div className="enemy-status-board">
               <StatusList
                 effects={battle.enemy.statusEffects}
                 emptyText={t.battle.noStatusEffects}
@@ -775,61 +773,30 @@ export function App() {
               />
             </div>
 
-            <div className="combat-side party-side">
-              {selectedMember.spriteUrl ? (
-                <img
-                  alt={spriteAlt(selectedMember.name)}
-                  className="battle-sprite hero-sprite"
-                  src={selectedMember.spriteUrl}
-                />
-              ) : null}
-              <div className="active-character-card">
-                <span>{t.battleScene.activeCharacter}</span>
-                <strong>{selectedMember.name}</strong>
-                <small>{selectedMember.role}</small>
-              </div>
-            </div>
-          </section>
-
-          <section className="battle-command-panel" aria-label={t.battleScene.characterCommands}>
-            <div className="character-strip">
+            <div className="party-window">
               {battle.party.map((member) => (
                 <button
-                  className={`character-tile ${member.id === selectedMember.id ? "selected" : ""}`}
+                  className={`party-command-card ${member.id === selectedMember.id ? "selected" : ""}`}
                   key={member.id}
                   onClick={() => setSelectedMemberId(member.id)}
                   type="button"
                 >
-                  {member.spriteUrl ? (
-                    <img alt={spriteAlt(member.name)} src={member.spriteUrl} />
-                  ) : null}
+                  <strong>{member.name}</strong>
                   <span>
-                    <strong>{member.name}</strong>
-                    <small>{formatNumber(member.hp)} / {formatNumber(member.maxHp + battle.weaponGrid.hp)}</small>
+                    {t.battle.hp} {formatNumber(member.hp)}
+                    <b>CA {member.chargeBar}%</b>
                   </span>
-                  <em>{member.chargeBar}% CA</em>
+                  <i style={{ width: hpPercent(member.hp, member.maxHp + battle.weaponGrid.hp) }} />
                 </button>
               ))}
-              <div className="summon-placeholder">{t.battleScene.noSummon}</div>
             </div>
 
-            <div className="command-deck" aria-label={t.battleScene.commandCenter}>
-              <button className="primary-command" onClick={() => setBattle(attackTurn)} type="button">
-                <Swords size={20} />
-                {t.commands.attackTurn}
-              </button>
-              <button onClick={() => resetBattle()} type="button">
-                <RotateCcw size={18} />
-                {t.commands.reset}
-              </button>
-            </div>
-
-            <div className="character-detail-grid">
-              <section className="skill-grid" aria-label={`${selectedMember.name}${t.panels.skills}`}>
-                <div className="section-title">
-                  <Zap size={18} />
-                  <h2>{t.battleScene.skillPanel}</h2>
-                </div>
+            <div className="skill-command-window" aria-label={`${selectedMember.name}${t.panels.skills}`}>
+              <header>
+                <strong>{selectedMember.name}</strong>
+                <span>{t.battleScene.skillPanel}</span>
+              </header>
+              <div className="compact-skill-grid">
                 {selectedMember.skills.map((skill) => (
                   <button
                     disabled={skill.remainingCooldown > 0}
@@ -837,53 +804,32 @@ export function App() {
                     onClick={() =>
                       setBattle((current) => executeSkill(current, selectedMember.id, skill.id))
                     }
+                    title={describeSkill(skill)}
                     type="button"
                   >
-                    <span className="skill-copy">
-                      <strong>{skill.label}</strong>
-                      <small>{describeSkill(skill)}</small>
-                    </span>
-                    <em>{skill.remainingCooldown > 0 ? `${skill.remainingCooldown}T` : skill.kind}</em>
+                    <strong>{skill.label}</strong>
+                    <small>{skill.remainingCooldown > 0 ? `${skill.remainingCooldown}T` : skill.kind}</small>
                   </button>
                 ))}
-              </section>
+              </div>
+            </div>
 
-              <StatusList
-                effects={selectedMember.statusEffects}
-                emptyText={t.battle.noStatusEffects}
-                title={`${selectedMember.name} ${t.panels.statusEffects}`}
-              />
+            <div className="screen-actions">
+              <button className="primary-command" onClick={() => setBattle(attackTurn)} type="button">
+                <Swords size={18} />
+                {t.commands.attackTurn}
+              </button>
+              <button onClick={() => resetBattle()} type="button">
+                <RotateCcw size={16} />
+                {t.commands.reset}
+              </button>
             </div>
-          </section>
 
-          <section className="battle-strip" aria-label={t.battleScene.previewPanel}>
-            <div>
-              <Axe size={18} />
-              {t.preview.base} {formatNumber(selectedPreview.baseDamage)}
-            </div>
-            <div>
-              <Flame size={18} />
-              {t.preview.advantage} x{DEFAULT_ADVANTAGE_MULTIPLIER}
-            </div>
-            <div>
-              <Sparkles size={18} />
-              {t.preview.cap} {formatNumber(selectedPreview.cap)}
-            </div>
-            <div>
-              <Zap size={18} />
-              {t.preview.hit} {formatNumber(selectedPreview.finalDamage)}
-            </div>
-            <div>
-              <Sparkles size={18} />
-              {t.preview.crit} x{selectedPreview.criticalMultiplier}
-            </div>
-            <div>
-              <Sparkles size={18} />
-              随机 x{selectedPreview.varianceMultiplier}
-            </div>
-            <div>
-              <Axe size={18} />
-              {t.preview.supplemental} {formatNumber(selectedPreview.supplementalDamage)}
+            <div className="preview-ribbon" aria-label={t.battleScene.previewPanel}>
+              <span>{t.preview.base} {formatNumber(selectedPreview.baseDamage)}</span>
+              <span>{t.preview.advantage} x{DEFAULT_ADVANTAGE_MULTIPLIER}</span>
+              <span>{t.preview.cap} {formatNumber(selectedPreview.cap)}</span>
+              <span>{t.preview.hit} {formatNumber(selectedPreview.finalDamage)}</span>
             </div>
           </section>
         </section>

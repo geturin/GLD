@@ -421,9 +421,384 @@ h3 {
 }
 
 .battle-stage {
+  display: block;
+  min-height: auto;
+  padding: 10px;
+}
+
+.dungeon-battle-screen {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  aspect-ratio: 4 / 3;
+  min-height: 520px;
+  overflow: hidden;
+  border: 5px solid #d4c58f;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(21, 38, 42, 0.18), rgba(21, 26, 24, 0.28)),
+    radial-gradient(circle at 50% 78%, rgba(82, 154, 90, 0.58), transparent 30%),
+    linear-gradient(180deg, #173833 0%, #255d49 48%, #398057 49%, #246848 68%, #173329 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(8, 28, 25, 0.8),
+    0 20px 50px rgba(0, 0, 0, 0.34);
+}
+
+.dungeon-battle-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 34px),
+    repeating-linear-gradient(0deg, transparent 0 28px, rgba(7, 32, 28, 0.36) 28px 31px);
+  opacity: 0.58;
+}
+
+.dungeon-battle-screen::after {
+  content: "";
+  position: absolute;
+  inset: 82px 32px 128px;
+  z-index: -1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(110, 205, 132, 0.52), rgba(24, 83, 57, 0.2) 44%, transparent 65%);
+}
+
+.screen-corner {
+  position: absolute;
+  z-index: 4;
+  width: 24px;
+  aspect-ratio: 1;
+  border-color: #f5e5a6;
+  border-style: solid;
+}
+
+.screen-corner.top-left {
+  top: 10px;
+  left: 10px;
+  border-width: 4px 0 0 4px;
+}
+
+.screen-corner.top-right {
+  top: 10px;
+  right: 10px;
+  border-width: 4px 4px 0 0;
+}
+
+.screen-corner.bottom-left {
+  bottom: 10px;
+  left: 10px;
+  border-width: 0 0 4px 4px;
+}
+
+.screen-corner.bottom-right {
+  right: 10px;
+  bottom: 10px;
+  border-width: 0 4px 4px 0;
+}
+
+.battle-message {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  z-index: 3;
   display: grid;
-  gap: 14px;
-  min-height: 690px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  width: min(62%, 520px);
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 2px solid rgba(213, 236, 206, 0.62);
+  background: rgba(8, 99, 78, 0.82);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.18);
+}
+
+.battle-message span {
+  color: #eaf9db;
+  font-size: 1.65rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.battle-message p {
+  margin-bottom: 0;
+  color: #f2ffe9;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.enemy-overview {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  z-index: 3;
+  display: grid;
+  gap: 8px;
+  width: min(34%, 260px);
+  padding: 10px;
+  border: 2px solid rgba(245, 229, 166, 0.72);
+  background: rgba(17, 31, 31, 0.82);
+}
+
+.enemy-overview strong,
+.enemy-overview small {
+  display: block;
+}
+
+.enemy-overview strong {
+  color: #f5e5a6;
+}
+
+.enemy-overview small {
+  color: #d6eadf;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.enemy-mini-hp {
+  position: relative;
+  height: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(245, 229, 166, 0.7);
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.enemy-mini-hp i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f06c4a, #f5e5a6);
+}
+
+.enemy-mini-hp span {
+  position: absolute;
+  inset: 1px 6px auto auto;
+  color: #f7f4d0;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.enemy-stage {
+  position: absolute;
+  inset: 82px 8% 176px;
+  display: grid;
+  place-items: center;
+}
+
+.enemy-shadow {
+  position: absolute;
+  bottom: 22px;
+  width: min(54%, 360px);
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.32);
+  filter: blur(3px);
+}
+
+.dungeon-enemy-sprite {
+  position: relative;
+  width: clamp(220px, 36vw, 390px);
+  max-height: 330px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 16px 0 rgba(0, 0, 0, 0.26));
+}
+
+.enemy-status-board {
+  position: absolute;
+  top: 96px;
+  left: 18px;
+  z-index: 3;
+  width: min(31%, 260px);
+}
+
+.enemy-status-board .status-panel {
+  margin-top: 0;
+  max-height: 138px;
+  overflow: auto;
+  background: rgba(8, 22, 22, 0.72);
+}
+
+.party-window {
+  position: absolute;
+  right: 18px;
+  bottom: 26px;
+  left: 18px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.party-command-card {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  min-height: 58px;
+  overflow: hidden;
+  padding: 7px 9px 9px;
+  border: 2px solid rgba(18, 52, 54, 0.95);
+  border-radius: 0;
+  color: #f5fff0;
+  background: rgba(10, 96, 82, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(228, 250, 225, 0.24);
+  cursor: pointer;
+  text-align: left;
+}
+
+.party-command-card.selected {
+  border-color: #f5e5a6;
+  background: rgba(13, 121, 96, 0.94);
+}
+
+.party-command-card strong,
+.party-command-card span {
+  position: relative;
+  z-index: 1;
+}
+
+.party-command-card strong {
+  font-size: 0.84rem;
+}
+
+.party-command-card span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #eaf9db;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.party-command-card b {
+  color: #f5e5a6;
+}
+
+.party-command-card i {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: #f5e5a6;
+}
+
+.skill-command-window {
+  position: absolute;
+  right: 18px;
+  bottom: 96px;
+  z-index: 3;
+  width: min(52%, 430px);
+  padding: 10px;
+  border: 2px solid rgba(245, 229, 166, 0.76);
+  background: rgba(16, 26, 27, 0.86);
+}
+
+.skill-command-window header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: #f5e5a6;
+  font-size: 0.82rem;
+}
+
+.skill-command-window header span {
+  color: #cbd6dc;
+}
+
+.compact-skill-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.compact-skill-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0;
+  color: #eef4f8;
+  background: rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+}
+
+.compact-skill-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.compact-skill-grid strong,
+.compact-skill-grid small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-skill-grid small {
+  color: #f5e5a6;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.screen-actions {
+  position: absolute;
+  right: 18px;
+  bottom: 158px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.screen-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0;
+  color: #eef4f8;
+  background: rgba(18, 30, 31, 0.88);
+  cursor: pointer;
+}
+
+.screen-actions .primary-command {
+  color: #16211d;
+  background: #f5e5a6;
+  font-weight: 900;
+}
+
+.preview-ribbon {
+  position: absolute;
+  bottom: 96px;
+  left: 18px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 10px;
+  width: min(39%, 320px);
+  padding: 9px;
+  border: 2px solid rgba(18, 52, 54, 0.95);
+  background: rgba(8, 22, 22, 0.76);
+}
+
+.preview-ribbon span {
+  color: #f5e5a6;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .enemy-hud {
@@ -1066,6 +1441,19 @@ h3 {
     min-height: auto;
   }
 
+  .dungeon-battle-screen {
+    max-width: 100%;
+    min-height: 500px;
+  }
+
+  .battle-message {
+    width: min(58%, 440px);
+  }
+
+  .enemy-overview {
+    width: min(38%, 260px);
+  }
+
   .enemy-hud,
   .character-detail-grid {
     grid-template-columns: 1fr;
@@ -1090,6 +1478,61 @@ h3 {
   .battle-strip {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .dungeon-battle-screen {
+    aspect-ratio: auto;
+    min-height: 720px;
+  }
+
+  .battle-message,
+  .enemy-overview,
+  .enemy-status-board,
+  .skill-command-window,
+  .screen-actions,
+  .preview-ribbon,
+  .party-window {
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+
+  .battle-message {
+    grid-template-columns: auto 1fr;
+  }
+
+  .enemy-overview {
+    top: 88px;
+  }
+
+  .enemy-status-board {
+    top: 172px;
+  }
+
+  .enemy-stage {
+    inset: 252px 8% 310px;
+  }
+
+  .dungeon-enemy-sprite {
+    width: min(74vw, 310px);
+  }
+
+  .screen-actions {
+    bottom: 240px;
+  }
+
+  .skill-command-window {
+    bottom: 126px;
+  }
+
+  .preview-ribbon {
+    bottom: 62px;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .party-window {
+    bottom: 18px;
+    grid-template-columns: 1fr;
   }
 
   .pixel-battlefield {
