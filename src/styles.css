@@ -671,6 +671,61 @@ h3 {
   line-height: 1.4;
 }
 
+.data-editor {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.editor-toolbar,
+.editor-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.editor-toolbar select,
+.data-editor textarea,
+.editor-actions button {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  color: #eef4f8;
+  background: #15171a;
+  font: inherit;
+}
+
+.editor-toolbar select,
+.editor-actions button {
+  min-height: 36px;
+}
+
+.data-editor textarea {
+  min-height: 260px;
+  padding: 10px;
+  resize: vertical;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.editor-actions button {
+  cursor: pointer;
+}
+
+.editor-error {
+  margin-bottom: 0;
+  color: #e65f5c;
+  font-size: 0.82rem;
+}
+
+.editor-note {
+  margin-bottom: 0;
+  color: #aab8c0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .formula-card h3 {
   color: #f4d58b;
 }

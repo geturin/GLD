@@ -1,0 +1,37 @@
+[
+  {
+    "id": "foundry-warden",
+    "name": "铸炉守卫",
+    "maxHp": 5000000,
+    "hp": 5000000,
+    "attack": 8500,
+    "defense": 10,
+    "chargeDiamonds": 1,
+    "maxChargeDiamonds": 3,
+    "mode": "normal",
+    "modeGauge": 1,
+    "debuffResistance": 0.1,
+    "statusEffects": [],
+    "triggers": [
+      {
+        "id": "hp-50-special",
+        "label": "HP 50% 触发",
+        "timing": "afterAttack",
+        "once": true,
+        "priority": 100,
+        "condition": { "type": "hpBelow", "threshold": 0.5 },
+        "action": { "type": "specialAttack", "multiplier": 1.2 }
+      },
+      {
+        "id": "overdrive-phase",
+        "label": "Overdrive 阶段",
+        "timing": "afterAttack",
+        "once": true,
+        "priority": 80,
+        "condition": { "type": "hpBelow", "threshold": 0.7 },
+        "action": { "type": "phaseChange", "mode": "overdrive" }
+      }
+    ],
+    "triggeredIds": []
+  }
+]

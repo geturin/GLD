@@ -12,6 +12,8 @@ Combat system notes:
 
 - [GLD 战斗计算流程梳理](docs/combat-system-gap-analysis.md)
 
+Content data lives under `src/data/` as JSON. The in-app data editor can inspect, edit, and add runtime weapons, characters, and enemies for quick iteration.
+
 ## Development
 
 This project uses Vite, React, and TypeScript for the web game shell. PixiJS is included for future 2D dungeon and battle rendering.

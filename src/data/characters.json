@@ -1,0 +1,121 @@
+[
+  {
+    "id": "demo-hero",
+    "name": "阿斯特",
+    "role": "单角色战斗 Demo",
+    "maxHp": 16000,
+    "hp": 16000,
+    "baseAttack": 9800,
+    "chargeBar": 50,
+    "multiattack": { "double": 0.24, "triple": 0.08 },
+    "chargeAttack": {
+      "label": "绯红驱动",
+      "multiplier": 4.5,
+      "cap": 1685000,
+      "fixedDamage": 2000
+    },
+    "skills": [
+      {
+        "id": "team-atk-up",
+        "label": "战斗号令",
+        "cooldown": 5,
+        "remainingCooldown": 0,
+        "kind": "buff",
+        "target": "party",
+        "applies": [
+          {
+            "id": "team-atk-up-buff",
+            "label": "全队攻击力提升",
+            "duration": 3,
+            "polarity": "buff",
+            "stackingSide": "normal",
+            "stackingRule": "replace",
+            "modifiers": [
+              {
+                "id": "team-atk-up-normal",
+                "label": "全队攻击力提升",
+                "bucket": "normal",
+                "value": 0.1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "atk-def-down",
+        "label": "破甲标记",
+        "cooldown": 5,
+        "remainingCooldown": 0,
+        "kind": "debuff",
+        "target": "enemy",
+        "applies": [
+          {
+            "id": "atk-def-down-debuff",
+            "label": "攻击 / 防御下降",
+            "duration": 3,
+            "polarity": "debuff",
+            "stackingSide": "dual",
+            "stackingRule": "replace",
+            "accuracy": 0.9,
+            "attackDown": 0.1,
+            "defenseDown": 0.1
+          }
+        ]
+      },
+      {
+        "id": "self-unique-up",
+        "label": "极限架势",
+        "cooldown": 6,
+        "remainingCooldown": 0,
+        "kind": "buff",
+        "target": "self",
+        "applies": [
+          {
+            "id": "self-unique-up-buff",
+            "label": "独立攻刃提升",
+            "duration": 1,
+            "polarity": "buff",
+            "stackingSide": "unique",
+            "stackingRule": "replace",
+            "modifiers": [
+              {
+                "id": "self-unique-up-mod",
+                "label": "独立攻刃提升",
+                "bucket": "unique",
+                "value": 0.3
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "triple-strike",
+        "label": "三连烙印",
+        "cooldown": 5,
+        "remainingCooldown": 0,
+        "kind": "damage",
+        "target": "enemy",
+        "hitCount": 3,
+        "damageMultiplier": 1,
+        "damageCap": 200000,
+        "chargeGain": 10
+      }
+    ],
+    "personalModifiers": [
+      { "id": "unique-passive", "label": "独立被动", "bucket": "unique", "value": 0 },
+      { "id": "seraphic-passive", "label": "天司", "bucket": "seraphic", "value": 0 }
+    ],
+    "critical": [],
+    "bonusDamage": [
+      {
+        "id": "normal-echo",
+        "label": "追击伤害",
+        "multiplier": 0,
+        "appliesTo": ["normal", "counter"]
+      }
+    ],
+    "supplemental": [],
+    "capUp": [],
+    "statusEffects": []
+  }
+]

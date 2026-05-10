@@ -1,0 +1,23 @@
+[
+  {
+    "id": "demo-grid",
+    "name": "Demo 武器盘",
+    "mainhands": [
+      { "weaponId": "luminous-blade" },
+      { "weaponId": "ephes-like" },
+      { "weaponId": "basara-katana" },
+      null
+    ],
+    "subSlots": [
+      { "weaponId": "ephes-like" },
+      { "weaponId": "basara-katana" },
+      { "weaponId": "luminous-blade" },
+      { "weaponId": "ephes-like" },
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  }
+]

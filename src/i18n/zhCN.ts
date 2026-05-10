@@ -16,6 +16,7 @@ export const zhCN = {
     battleLog: "战斗日志",
     statusEffects: "状态效果",
     weaponGrid: "武器盘",
+    dataEditor: "数据编辑器",
   },
   groups: {
     base: "基础",
@@ -65,6 +66,16 @@ export const zhCN = {
     locked: "未解锁",
     empty: "空槽",
     activeSummary: "{mainhands}+3x3 生效",
+  },
+  dataEditor: {
+    kinds: {
+      weapons: "武器",
+      characters: "角色",
+      enemies: "怪物",
+    },
+    save: "保存到当前运行数据",
+    add: "新增",
+    note: "编辑器会更新当前浏览器中的运行时数据；如需永久保存，请把 JSON 内容同步到 src/data 下对应文件。",
   },
   commands: {
     attackTurn: "攻击回合",

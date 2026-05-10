@@ -13,20 +13,25 @@ import {
   Zap,
 } from "lucide-react";
 import { attackTurn, executeSkill } from "./game/battleEngine";
-import { createInitialBattleState } from "./game/demoState";
+import {
+  type GameDataSets,
+  createDefaultDataSets,
+  createInitialBattleState,
+} from "./game/demoState";
 import { DEFAULT_ADVANTAGE_MULTIPLIER, resolveHit } from "./game/formulas";
 import { describeSkill } from "./game/skillText";
 import {
   MAINHAND_SLOT_COUNT,
-  WEAPON_CATALOG,
   recomputeWeaponGrid,
 } from "./game/weaponGrid";
 import type {
   AttackKind,
   BattleState,
   Combatant,
+  Enemy,
   ModifierBucket,
   StatusEffect,
+  WeaponDefinition,
 } from "./game/types";
 import { t } from "./i18n/zhCN";
 
@@ -259,9 +264,81 @@ function RangeControl({
   );
 }
 
+type DataEditorKind = "weapons" | "characters" | "enemies";
+
+const editorKinds: DataEditorKind[] = ["weapons", "characters", "enemies"];
+
+function createBlankWeapon(): WeaponDefinition {
+  return {
+    id: `weapon-${Date.now()}`,
+    name: "新武器",
+    series: "自定义",
+    weaponType: "sword",
+    attack: 1000,
+    hp: 100,
+    skills: [],
+  };
+}
+
+function createBlankCharacter(): Combatant {
+  return {
+    id: `character-${Date.now()}`,
+    name: "新角色",
+    role: "自定义角色",
+    maxHp: 10000,
+    hp: 10000,
+    baseAttack: 8000,
+    chargeBar: 0,
+    multiattack: { double: 0.1, triple: 0.03 },
+    chargeAttack: {
+      label: "奥义",
+      multiplier: 4.5,
+      cap: 1685000,
+      fixedDamage: 0,
+    },
+    skills: [],
+    personalModifiers: [],
+    critical: [],
+    bonusDamage: [],
+    supplemental: [],
+    capUp: [],
+    statusEffects: [],
+  };
+}
+
+function createBlankEnemy(): Enemy {
+  return {
+    id: `enemy-${Date.now()}`,
+    name: "新怪物",
+    maxHp: 1000000,
+    hp: 1000000,
+    attack: 5000,
+    defense: 10,
+    chargeDiamonds: 0,
+    maxChargeDiamonds: 3,
+    mode: "normal",
+    modeGauge: 1,
+    debuffResistance: 0.1,
+    statusEffects: [],
+    triggers: [],
+    triggeredIds: [],
+  };
+}
+
+function itemName(item: { id: string; name: string }) {
+  return `${item.name} (${item.id})`;
+}
+
 export function App() {
-  const [battle, setBattle] = useState(createInitialBattleState);
+  const [dataSets, setDataSets] = useState(createDefaultDataSets);
+  const [battle, setBattle] = useState(() => createInitialBattleState(dataSets));
   const [selectedMemberId, setSelectedMemberId] = useState(battle.party[0].id);
+  const [editorKind, setEditorKind] = useState<DataEditorKind>("weapons");
+  const [editorId, setEditorId] = useState(dataSets.weapons[0]?.id ?? "");
+  const [editorDraft, setEditorDraft] = useState(() =>
+    JSON.stringify(dataSets.weapons[0] ?? createBlankWeapon(), null, 2),
+  );
+  const [editorError, setEditorError] = useState("");
 
   const selectedMember =
     battle.party.find((member) => member.id === selectedMemberId) ?? battle.party[0];
@@ -439,6 +516,64 @@ export function App() {
     selectedMember.bonusDamage.find((rule) => rule.id === "normal-echo")?.multiplier ?? 0,
   );
   const activeMainhands = Math.min(MAINHAND_SLOT_COUNT, battle.party.length);
+  const editorItems = dataSets[editorKind] as Array<{ id: string; name: string }>;
+
+  function resetBattle(nextDataSets = dataSets) {
+    const nextBattle = createInitialBattleState(nextDataSets);
+    setBattle(nextBattle);
+    setSelectedMemberId(nextBattle.party[0]?.id ?? "");
+  }
+
+  function selectEditorItem(kind: DataEditorKind, id: string) {
+    const items = dataSets[kind] as Array<{ id: string; name: string }>;
+    const item = items.find((candidate) => candidate.id === id) ?? items[0];
+    setEditorKind(kind);
+    setEditorId(item?.id ?? "");
+    setEditorDraft(JSON.stringify(item ?? {}, null, 2));
+    setEditorError("");
+  }
+
+  function saveEditorDraft() {
+    try {
+      const parsed = JSON.parse(editorDraft) as { id: string; name: string };
+      if (!parsed.id || !parsed.name) {
+        throw new Error("数据必须包含 id 和 name。");
+      }
+
+      const nextDataSets = structuredClone(dataSets);
+      const items = nextDataSets[editorKind] as Array<{ id: string; name: string }>;
+      const existingIndex = items.findIndex((item) => item.id === editorId);
+
+      if (existingIndex >= 0) {
+        items[existingIndex] = parsed;
+      } else {
+        items.push(parsed);
+      }
+
+      setDataSets(nextDataSets);
+      setEditorId(parsed.id);
+      setEditorDraft(JSON.stringify(parsed, null, 2));
+      setEditorError("");
+      resetBattle(nextDataSets);
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : "JSON 格式错误。");
+    }
+  }
+
+  function addEditorItem() {
+    const item =
+      editorKind === "weapons"
+        ? createBlankWeapon()
+        : editorKind === "characters"
+          ? createBlankCharacter()
+          : createBlankEnemy();
+    const nextDataSets = structuredClone(dataSets);
+    (nextDataSets[editorKind] as Array<{ id: string; name: string }>).push(item);
+    setDataSets(nextDataSets);
+    setEditorId(item.id);
+    setEditorDraft(JSON.stringify(item, null, 2));
+    setEditorError("");
+  }
 
   function equipWeapon(slotType: "mainhand" | "sub", index: number, weaponId: string) {
     setBattle((current) => {
@@ -453,7 +588,7 @@ export function App() {
 
       return {
         ...current,
-        weaponGrid: recomputeWeaponGrid(nextGrid, current.party.length),
+        weaponGrid: recomputeWeaponGrid(nextGrid, current.party.length, dataSets.weapons),
         lastActionSummary: `${t.panels.weaponGrid}已更新`,
       };
     });
@@ -625,7 +760,7 @@ export function App() {
               <Swords size={20} />
               {t.commands.attackTurn}
             </button>
-            <button onClick={() => setBattle(createInitialBattleState())} type="button">
+            <button onClick={() => resetBattle()} type="button">
               <RotateCcw size={18} />
               {t.commands.reset}
             </button>
@@ -713,7 +848,7 @@ export function App() {
                       value={slot?.weaponId ?? ""}
                     >
                       <option value="">{locked ? t.weaponGrid.locked : t.weaponGrid.empty}</option>
-                      {WEAPON_CATALOG.map((weapon) => (
+                      {dataSets.weapons.map((weapon) => (
                         <option key={weapon.id} value={weapon.id}>
                           {weapon.name}
                         </option>
@@ -732,7 +867,7 @@ export function App() {
                     value={slot?.weaponId ?? ""}
                   >
                     <option value="">{t.weaponGrid.empty}</option>
-                    {WEAPON_CATALOG.map((weapon) => (
+                    {dataSets.weapons.map((weapon) => (
                       <option key={weapon.id} value={weapon.id}>
                         {weapon.name}
                       </option>
@@ -742,13 +877,59 @@ export function App() {
               ))}
             </div>
             <ul className="weapon-skill-list">
-              {WEAPON_CATALOG.map((weapon) => (
+              {dataSets.weapons.map((weapon) => (
                 <li key={weapon.id}>
                   <strong>{weapon.name}</strong>
                   <small>{weapon.series} / {weapon.skills.map((skill) => skill.label).join("、")}</small>
                 </li>
               ))}
             </ul>
+          </section>
+
+          <div className="panel-heading">
+            <Sparkles size={18} />
+            <h2>{t.panels.dataEditor}</h2>
+          </div>
+          <section className="data-editor">
+            <div className="editor-toolbar">
+              <select
+                onChange={(event) =>
+                  selectEditorItem(event.target.value as DataEditorKind, "")
+                }
+                value={editorKind}
+              >
+                {editorKinds.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {t.dataEditor.kinds[kind]}
+                  </option>
+                ))}
+              </select>
+              <select
+                onChange={(event) => selectEditorItem(editorKind, event.target.value)}
+                value={editorId}
+              >
+                {editorItems.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {itemName(item)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              spellCheck={false}
+              onChange={(event) => setEditorDraft(event.target.value)}
+              value={editorDraft}
+            />
+            {editorError ? <p className="editor-error">{editorError}</p> : null}
+            <div className="editor-actions">
+              <button onClick={saveEditorDraft} type="button">
+                {t.dataEditor.save}
+              </button>
+              <button onClick={addEditorItem} type="button">
+                {t.dataEditor.add}
+              </button>
+            </div>
+            <p className="editor-note">{t.dataEditor.note}</p>
           </section>
 
           <div className="panel-heading">
