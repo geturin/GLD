@@ -4,7 +4,9 @@ import type {
   CriticalRule,
   DamageBreakdown,
   DamageCapModifier,
+  DamageCapTier,
   DamageContext,
+  DamageInstance,
   Enemy,
   ModifierBucket,
   ScalarModifier,
@@ -14,6 +16,46 @@ import type {
 import { t } from "../i18n/zhCN";
 
 export const DEFAULT_ADVANTAGE_MULTIPLIER = 1.5;
+const DEF_DOWN_CAP = 0.5;
+const HARD_DAMAGE_CAP = 13_100_000;
+
+const DAMAGE_CAP_TABLES: Record<AttackKind, DamageCapTier[]> = {
+  normal: [
+    { threshold: 300_000, reduction: 0 },
+    { threshold: 400_000, reduction: 0.2 },
+    { threshold: 500_000, reduction: 0.6 },
+    { threshold: 600_000, reduction: 0.95 },
+    { threshold: Infinity, reduction: 0.99 },
+  ],
+  counter: [
+    { threshold: 300_000, reduction: 0 },
+    { threshold: 400_000, reduction: 0.2 },
+    { threshold: 500_000, reduction: 0.6 },
+    { threshold: 600_000, reduction: 0.95 },
+    { threshold: Infinity, reduction: 0.99 },
+  ],
+  charge: [
+    { threshold: 1_500_000, reduction: 0 },
+    { threshold: 1_700_000, reduction: 0.4 },
+    { threshold: 1_800_000, reduction: 0.7 },
+    { threshold: 2_500_000, reduction: 0.95 },
+    { threshold: Infinity, reduction: 0.99 },
+  ],
+  skill: [
+    { threshold: 200_000, reduction: 0 },
+    { threshold: 260_000, reduction: 0.4 },
+    { threshold: 330_000, reduction: 0.7 },
+    { threshold: 500_000, reduction: 0.95 },
+    { threshold: Infinity, reduction: 0.99 },
+  ],
+  chainBurst: [
+    { threshold: 1_500_000, reduction: 0 },
+    { threshold: 1_700_000, reduction: 0.4 },
+    { threshold: 1_800_000, reduction: 0.7 },
+    { threshold: 2_500_000, reduction: 0.95 },
+    { threshold: Infinity, reduction: 0.99 },
+  ],
+};
 
 const BUCKET_DEFAULTS: Record<ModifierBucket, number> = {
   normal: 0,
@@ -41,6 +83,31 @@ export function collectStatusSupplemental(statusEffects: StatusEffect[] = []) {
   return statusEffects.flatMap((effect) => effect.supplemental ?? []);
 }
 
+export function collectDefenseDown(statusEffects: StatusEffect[] = []) {
+  return Math.min(
+    DEF_DOWN_CAP,
+    statusEffects.reduce((total, effect) => total + (effect.defenseDown ?? 0), 0),
+  );
+}
+
+export function collectDefenseUp(statusEffects: StatusEffect[] = []) {
+  return statusEffects.reduce((total, effect) => total + (effect.defenseUp ?? 0), 0);
+}
+
+export function collectDamageCut(statusEffects: StatusEffect[] = []) {
+  return Math.min(
+    1,
+    statusEffects.reduce((total, effect) => total + (effect.damageCut ?? 0), 0),
+  );
+}
+
+export function collectDamageReduction(statusEffects: StatusEffect[] = []) {
+  return Math.min(
+    1,
+    statusEffects.reduce((total, effect) => total + (effect.damageReduction ?? 0), 0),
+  );
+}
+
 export function sumModifiers(modifiers: ScalarModifier[]) {
   return modifiers.reduce<Record<ModifierBucket, number>>(
     (totals, modifier) => {
@@ -66,10 +133,8 @@ export function enmityStrength(maxStrength: number, hpRatio: number) {
 
 export function baseDamage(context: DamageContext) {
   const statusModifiers = collectStatusModifiers(context.attacker.statusEffects);
-  const enemyDefenseDown = context.enemy.statusEffects.reduce(
-    (total, effect) => total + (effect.defenseDown ?? 0),
-    0,
-  );
+  const enemyDefenseDown = collectDefenseDown(context.enemy.statusEffects);
+  const enemyDefenseUp = collectDefenseUp(context.enemy.statusEffects);
   const modifiers = sumModifiers([
     ...context.weaponGrid.modifiers,
     ...context.attacker.personalModifiers,
@@ -85,7 +150,10 @@ export function baseDamage(context: DamageContext) {
   const hpRatio = Math.max(0, Math.min(1, context.attacker.hp / context.attacker.maxHp));
   const attack =
     context.attacker.baseAttack + context.weaponGrid.attack + context.enemy.defense * 24;
-  const effectiveDefense = Math.max(1, context.enemy.defense * (1 - enemyDefenseDown));
+  const effectiveDefense = Math.max(
+    1,
+    context.enemy.defense * Math.max(0.1, 1 + enemyDefenseUp - enemyDefenseDown),
+  );
   const normal = 1 + modifiers.normal;
   const omega = 1 + modifiers.omega;
   const ex = 1 + modifiers.ex;
@@ -131,16 +199,31 @@ export function capValue(baseCap: number, capUps: DamageCapModifier[], kind: Att
   return baseCap * (1 + weaponCap + otherCap);
 }
 
-export function applySoftCap(damage: number, cap: number) {
-  if (damage <= cap) {
-    return damage;
+export function applyDamageCapTable(damage: number, kind: AttackKind, capMultiplier: number) {
+  const table = DAMAGE_CAP_TABLES[kind];
+  let previousThreshold = 0;
+  let total = 0;
+
+  for (const tier of table) {
+    const threshold = tier.threshold * capMultiplier;
+    const tierInput = Math.min(Math.max(damage - previousThreshold, 0), threshold - previousThreshold);
+    total += tierInput * (1 - tier.reduction);
+    previousThreshold = threshold;
+
+    if (damage <= threshold) {
+      break;
+    }
   }
 
-  const overflow = damage - cap;
-  const tierOne = Math.min(overflow, cap * 0.5) * 0.5;
-  const tierTwo = Math.min(Math.max(overflow - cap * 0.5, 0), cap) * 0.2;
-  const tierThree = Math.max(overflow - cap * 1.5, 0) * 0.05;
-  return cap + tierOne + tierTwo + tierThree;
+  return Math.min(total, HARD_DAMAGE_CAP);
+}
+
+export function randomVarianceMultiplier(seed: number, enabled = true) {
+  if (!enabled) {
+    return 1;
+  }
+
+  return 0.95 + Math.round(deterministicRoll(seed, "variance") * 10) / 100;
 }
 
 export function deterministicRoll(seed: number, salt: string) {
@@ -162,10 +245,12 @@ export function supplementalDamage(
   rules: SupplementalRule[],
   kind: AttackKind,
   hitCount: number,
+  criticalTriggered: boolean,
 ) {
   return rules
     .filter((rule) => rule.appliesTo.includes(kind))
-    .reduce((total, rule) => total + rule.amount * hitCount, 0);
+    .filter((rule) => rule.condition !== "critical" || criticalTriggered)
+    .reduce((total, rule) => total + Math.min(rule.amount, rule.cap ?? rule.amount) * hitCount, 0);
 }
 
 export function resolveHit(context: DamageContext, hitCount = 1): DamageBreakdown {
@@ -182,29 +267,63 @@ export function resolveHit(context: DamageContext, hitCount = 1): DamageBreakdow
   const criticalRules = [...context.weaponGrid.critical, ...context.attacker.critical];
   const cap = capValue(context.cap, capUps, context.kind);
   const rawBase = baseDamage(context);
+  const variance = randomVarianceMultiplier(context.criticalSeed, context.randomVariance);
   const crit = criticalMultiplier(criticalRules, context.criticalSeed);
-  const preCap = rawBase * crit;
-  const capped = applySoftCap(preCap, cap);
-  const supplemental = supplementalDamage(supplementals, context.kind, hitCount);
-  const bonus = context.attacker.bonusDamage.reduce((total, bonusRule) => {
-    return total + capped * hitCount * bonusRule.multiplier;
-  }, 0);
+  const preCap = rawBase * variance * crit;
+  const capped = applyDamageCapTable(preCap, context.kind, cap / context.cap);
+  const primaryDamage = capped * hitCount;
+  const supplemental = supplementalDamage(supplementals, context.kind, hitCount, crit > 1);
+  const bonusInstances: DamageInstance[] = context.attacker.bonusDamage
+    .filter((bonusRule) => !bonusRule.appliesTo || bonusRule.appliesTo.includes(context.kind))
+    .map((bonusRule) => {
+      const rawBonus = capped * bonusRule.multiplier;
+      return {
+        id: bonusRule.id,
+        label: bonusRule.label,
+        kind: "bonus",
+        damage: Math.round(Math.min(rawBonus, bonusRule.cap ?? rawBonus) * hitCount),
+      };
+    });
+  const supplementalInstance: DamageInstance = {
+    id: "supplemental-total",
+    label: t.preview.supplemental,
+    kind: "supplemental",
+    damage: Math.round(supplemental),
+  };
+  const instances: DamageInstance[] = [
+    {
+      id: "primary",
+      label: context.kind,
+      kind: "primary",
+      damage: Math.round(primaryDamage),
+    },
+    ...bonusInstances,
+    ...(supplemental > 0 ? [supplementalInstance] : []),
+  ];
+  const bonus = bonusInstances.reduce((total, instance) => total + instance.damage, 0);
+  const damageCut = collectDamageCut(context.enemy.statusEffects);
+  const damageReduction = collectDamageReduction(context.enemy.statusEffects);
+  const finalBeforeReduction = instances.reduce((total, instance) => total + instance.damage, 0);
+  const finalDamage = finalBeforeReduction * (1 - damageCut) * (1 - damageReduction);
 
   return {
     baseDamage: Math.round(rawBase),
     preCapDamage: Math.round(preCap),
     cappedDamage: Math.round(capped),
-    finalDamage: Math.round(capped * hitCount + supplemental + bonus),
+    finalDamage: Math.round(finalDamage),
     supplementalDamage: Math.round(supplemental),
     bonusDamage: Math.round(bonus),
     criticalMultiplier: Number(crit.toFixed(2)),
+    varianceMultiplier: Number(variance.toFixed(2)),
     cap: Math.round(cap),
     hitCount,
+    instances,
     notes: [
       t.battle.capNote.replace("{value}", Math.round(cap).toLocaleString()),
       crit > 1
         ? t.battle.critical.replace("{value}", crit.toFixed(2))
         : t.battle.noCritical,
+      `随机 x${variance.toFixed(2)}`,
     ],
   };
 }

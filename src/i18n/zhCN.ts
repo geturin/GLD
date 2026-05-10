@@ -51,6 +51,7 @@ export const zhCN = {
     normalSupplemental: "通常补充",
     skillSupplemental: "技能补充",
     chargeAttackSupplemental: "奥义补充",
+    randomVariance: "随机伤害浮动",
   },
   commands: {
     attackTurn: "攻击回合",
@@ -115,6 +116,9 @@ export const zhCN = {
     mixed: "混合",
     attackDown: "攻击力下降 {value}",
     defenseDown: "防御力下降 {value}",
+    defenseUp: "防御力提升 {value}",
+    damageCut: "伤害减免 {value}",
+    damageReduction: "最终减伤 {value}",
     modifier: "{label} {value}",
     capUp: "{label} {value}",
     supplemental: "{label} +{value}",

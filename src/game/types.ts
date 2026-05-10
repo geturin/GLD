@@ -2,6 +2,22 @@ export type AttackKind = "normal" | "charge" | "skill" | "counter" | "chainBurst
 
 export type CapSource = "weapon" | "summon" | "buff" | "passive" | "special";
 
+export type StatusPolarity = "buff" | "debuff" | "mixed";
+
+export type StatusStackingRule = "replace" | "stack" | "unique";
+
+export type StatusStackingSide =
+  | "normal"
+  | "dual"
+  | "stackable"
+  | "unique"
+  | "local"
+  | "special";
+
+export type DamageInstanceKind = "primary" | "bonus" | "supplemental";
+
+export type EnemyTriggerTiming = "afterSkill" | "afterAttack" | "endTurn";
+
 export type ModifierBucket =
   | "normal"
   | "omega"
@@ -41,6 +57,8 @@ export interface BonusDamageRule {
   id: string;
   label: string;
   multiplier: number;
+  appliesTo?: AttackKind[];
+  cap?: number;
 }
 
 export interface SupplementalRule {
@@ -48,6 +66,9 @@ export interface SupplementalRule {
   label: string;
   amount: number;
   appliesTo: AttackKind[];
+  cap?: number;
+  condition?: "always" | "critical";
+  sourceType?: "weapon" | "skill" | "status" | "passive";
 }
 
 export interface MultiattackProfile {
@@ -59,12 +80,24 @@ export interface StatusEffect {
   id: string;
   label: string;
   duration: number;
+  polarity?: StatusPolarity;
+  stackingSide?: StatusStackingSide;
+  stackingRule?: StatusStackingRule;
+  stack?: number;
+  maxStacks?: number;
+  local?: boolean;
+  dispellable?: boolean;
+  accuracy?: number;
   modifiers?: ScalarModifier[];
   capUp?: DamageCapModifier[];
   supplemental?: SupplementalRule[];
   multiattack?: Partial<MultiattackProfile>;
+  defenseUp?: number;
   defenseDown?: number;
   attackDown?: number;
+  damageCut?: number;
+  damageReduction?: number;
+  debuffResistanceDown?: number;
 }
 
 export interface SkillDefinition {
@@ -127,7 +160,10 @@ export interface Enemy {
   maxChargeDiamonds: number;
   mode: "normal" | "overdrive" | "break";
   modeGauge: number;
+  debuffResistance: number;
   statusEffects: StatusEffect[];
+  triggers: EnemyTrigger[];
+  triggeredIds: string[];
 }
 
 export interface BattleState {
@@ -138,6 +174,11 @@ export interface BattleState {
   log: BattleLogEntry[];
   chainCount: number;
   lastActionSummary: string;
+  options: BattleOptions;
+}
+
+export interface BattleOptions {
+  randomVariance: boolean;
 }
 
 export interface BattleLogEntry {
@@ -157,6 +198,19 @@ export interface DamageContext {
   hitMultiplier: number;
   cap: number;
   criticalSeed: number;
+  randomVariance?: boolean;
+}
+
+export interface DamageCapTier {
+  threshold: number;
+  reduction: number;
+}
+
+export interface DamageInstance {
+  id: string;
+  label: string;
+  kind: DamageInstanceKind;
+  damage: number;
 }
 
 export interface DamageBreakdown {
@@ -167,7 +221,25 @@ export interface DamageBreakdown {
   supplementalDamage: number;
   bonusDamage: number;
   criticalMultiplier: number;
+  varianceMultiplier: number;
   cap: number;
   hitCount: number;
+  instances: DamageInstance[];
   notes: string[];
+}
+
+export interface EnemyTrigger {
+  id: string;
+  label: string;
+  timing: EnemyTriggerTiming;
+  once: boolean;
+  priority: number;
+  condition:
+    | { type: "hpBelow"; threshold: number }
+    | { type: "chargeFull" }
+    | { type: "status"; statusId: string };
+  action:
+    | { type: "specialAttack"; multiplier: number }
+    | { type: "fillCharge"; amount: number }
+    | { type: "phaseChange"; mode: Enemy["mode"] };
 }

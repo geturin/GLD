@@ -1,4 +1,11 @@
-import { enemyModeAfterDamage, normalHitCount, resolveHit } from "./formulas";
+import {
+  collectDamageCut,
+  collectDamageReduction,
+  deterministicRoll,
+  enemyModeAfterDamage,
+  normalHitCount,
+  resolveHit,
+} from "./formulas";
 import { t } from "../i18n/zhCN";
 import type {
   BattleLogEntry,
@@ -37,6 +44,58 @@ function tickStatus(effect: StatusEffect) {
   return { ...effect, duration: effect.duration - 1 };
 }
 
+function mergeStatusEffects(currentEffects: StatusEffect[], incomingEffects: StatusEffect[]) {
+  return incomingEffects.reduce((effects, incoming) => {
+    const next = structuredClone(incoming);
+    const existingIndex = effects.findIndex((effect) => {
+      if (next.stackingRule === "unique") {
+        return effect.id === next.id;
+      }
+
+      return (
+        effect.stackingSide &&
+        next.stackingSide &&
+        effect.stackingSide === next.stackingSide &&
+        effect.label === next.label
+      );
+    });
+
+    if (next.stackingRule === "stack") {
+      const existing = existingIndex >= 0 ? effects[existingIndex] : undefined;
+      const stack = Math.min((existing?.stack ?? 0) + (next.stack ?? 1), next.maxStacks ?? 999);
+      const stacked = {
+        ...next,
+        stack,
+        duration: Math.max(existing?.duration ?? 0, next.duration),
+      };
+
+      return existingIndex >= 0
+        ? effects.map((effect, index) => (index === existingIndex ? stacked : effect))
+        : [...effects, stacked];
+    }
+
+    if (existingIndex < 0) {
+      return [...effects, next];
+    }
+
+    const existing = effects[existingIndex];
+    const existingPower =
+      (existing.attackDown ?? 0) +
+      (existing.defenseDown ?? 0) +
+      (existing.defenseUp ?? 0) +
+      (existing.modifiers?.reduce((sum, modifier) => sum + modifier.value, 0) ?? 0);
+    const nextPower =
+      (next.attackDown ?? 0) +
+      (next.defenseDown ?? 0) +
+      (next.defenseUp ?? 0) +
+      (next.modifiers?.reduce((sum, modifier) => sum + modifier.value, 0) ?? 0);
+
+    return nextPower >= existingPower
+      ? effects.map((effect, index) => (index === existingIndex ? next : effect))
+      : effects;
+  }, currentEffects);
+}
+
 function nextCooldown(skill: SkillDefinition) {
   return {
     ...skill,
@@ -69,7 +128,7 @@ function applyPartyStatus(party: Combatant[], effects: StatusEffect[]) {
 
   return party.map((member) => ({
     ...member,
-    statusEffects: [...member.statusEffects, ...structuredClone(effects)],
+    statusEffects: mergeStatusEffects(member.statusEffects, effects),
   }));
 }
 
@@ -80,12 +139,22 @@ function applySelfStatus(party: Combatant[], actorId: string, effects: StatusEff
 
   return party.map((member) =>
     member.id === actorId
-      ? { ...member, statusEffects: [...member.statusEffects, ...structuredClone(effects)] }
+      ? { ...member, statusEffects: mergeStatusEffects(member.statusEffects, effects) }
       : member,
   );
 }
 
-function resolveEnemySpecial(state: BattleState) {
+function debuffLands(state: BattleState, effect: StatusEffect, seed: number) {
+  const resistanceDown = state.enemy.statusEffects.reduce(
+    (total, status) => total + (status.debuffResistanceDown ?? 0),
+    0,
+  );
+  const accuracy = effect.accuracy ?? 1;
+  const resistance = Math.max(0, state.enemy.debuffResistance - resistanceDown);
+  return deterministicRoll(seed, effect.id) <= Math.max(0, accuracy - resistance);
+}
+
+function resolveEnemySpecial(state: BattleState, multiplier = 1) {
   if (state.enemy.chargeDiamonds < state.enemy.maxChargeDiamonds || state.enemy.hp <= 0) {
     return state;
   }
@@ -103,12 +172,24 @@ function resolveEnemySpecial(state: BattleState) {
     0,
   );
   const effectiveAttack = state.enemy.attack * Math.max(0.1, 1 - attackDown);
-  const rawDamage = Math.round(effectiveAttack * (state.enemy.mode === "overdrive" ? 1.7 : 1.25));
+  const damageCut = collectDamageCut(target.statusEffects);
+  const damageReduction = collectDamageReduction(target.statusEffects);
+  const rawDamage = Math.round(
+    effectiveAttack *
+      (state.enemy.mode === "overdrive" ? 1.7 : 1.25) *
+      multiplier *
+      (1 - damageCut) *
+      (1 - damageReduction),
+  );
   const nextParty = state.party.map((member) =>
     member.id === target.id
       ? {
           ...member,
           hp: Math.max(0, member.hp - rawDamage),
+          chargeBar: Math.min(
+            100,
+            member.chargeBar + Math.max(5, Math.round((rawDamage / member.maxHp) * 50)),
+          ),
           counterStacks: member.counterStacks ? member.counterStacks + 1 : member.counterStacks,
         }
       : member,
@@ -149,6 +230,7 @@ function resolveCounters(state: BattleState) {
       hitMultiplier: 1.5,
       cap: NORMAL_ATTACK_CAP,
       criticalSeed: current.turn * 97 + index,
+      randomVariance: current.options.randomVariance,
     });
     const enemy = damageEnemy(current.enemy, breakdown.finalDamage);
     const party = current.party.map((partyMember) =>
@@ -176,6 +258,81 @@ function resolveCounters(state: BattleState) {
   }, state);
 }
 
+function triggerConditionMet(state: BattleState, trigger: Enemy["triggers"][number]) {
+  const { condition } = trigger;
+  if (trigger.once && state.enemy.triggeredIds.includes(trigger.id)) {
+    return false;
+  }
+
+  if (condition.type === "hpBelow") {
+    return state.enemy.hp / state.enemy.maxHp <= condition.threshold;
+  }
+
+  if (condition.type === "chargeFull") {
+    return state.enemy.chargeDiamonds >= state.enemy.maxChargeDiamonds;
+  }
+
+  if (condition.type === "status") {
+    return state.enemy.statusEffects.some((effect) => effect.id === condition.statusId);
+  }
+
+  return false;
+}
+
+function resolveEnemyTriggers(state: BattleState, timing: Enemy["triggers"][number]["timing"]) {
+  const trigger = state.enemy.triggers
+    .filter((candidate) => candidate.timing === timing && triggerConditionMet(state, candidate))
+    .sort((a, b) => b.priority - a.priority)[0];
+
+  if (!trigger) {
+    return state;
+  }
+
+  const withTriggeredId = {
+    ...state,
+    enemy: {
+      ...state.enemy,
+      triggeredIds: trigger.once ? [...state.enemy.triggeredIds, trigger.id] : state.enemy.triggeredIds,
+    },
+  };
+
+  if (trigger.action.type === "fillCharge") {
+    return {
+      ...withTriggeredId,
+      enemy: {
+        ...withTriggeredId.enemy,
+        chargeDiamonds: Math.min(
+          withTriggeredId.enemy.maxChargeDiamonds,
+          withTriggeredId.enemy.chargeDiamonds + trigger.action.amount,
+        ),
+      },
+      log: [
+        ...withTriggeredId.log,
+        makeLog(withTriggeredId, withTriggeredId.enemy.name, trigger.label, "触发器发动：CT 增加。"),
+      ],
+    };
+  }
+
+  if (trigger.action.type === "phaseChange") {
+    return {
+      ...withTriggeredId,
+      enemy: { ...withTriggeredId.enemy, mode: trigger.action.mode },
+      log: [
+        ...withTriggeredId.log,
+        makeLog(withTriggeredId, withTriggeredId.enemy.name, trigger.label, "敌方阶段变化。"),
+      ],
+    };
+  }
+
+  return resolveEnemySpecial(
+    {
+      ...withTriggeredId,
+      enemy: { ...withTriggeredId.enemy, chargeDiamonds: withTriggeredId.enemy.maxChargeDiamonds },
+    },
+    trigger.action.multiplier,
+  );
+}
+
 export function executeSkill(state: BattleState, actorId: string, skillId: string): BattleState {
   const actor = state.party.find((member) => member.id === actorId);
   const skill = actor?.skills.find((candidate) => candidate.id === skillId);
@@ -201,6 +358,7 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
         hitMultiplier: skill.damageMultiplier ?? 1,
         cap: skill.damageCap ?? 630000,
         criticalSeed: nextState.turn * 113 + actorIndex,
+        randomVariance: nextState.options.randomVariance,
       },
       hitCount,
     );
@@ -232,8 +390,18 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
   }
 
   if (skill.kind === "debuff") {
-    nextState.enemy.statusEffects = [...nextState.enemy.statusEffects, ...structuredClone(skill.applies ?? [])];
-    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.enemyDebuffed));
+    const landedEffects = (skill.applies ?? []).filter((effect, index) =>
+      debuffLands(nextState, effect, nextState.turn * 173 + index),
+    );
+    nextState.enemy.statusEffects = mergeStatusEffects(nextState.enemy.statusEffects, landedEffects);
+    nextState.log.push(
+      makeLog(
+        nextState,
+        nextActor.name,
+        skill.label,
+        landedEffects.length > 0 ? t.battle.enemyDebuffed : "弱体未命中。",
+      ),
+    );
   }
 
   if (skill.kind === "delay") {
@@ -250,6 +418,8 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
     };
     nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.substituteCounter));
   }
+
+  nextState = resolveEnemyTriggers(nextState, "afterSkill");
 
   return {
     ...nextState,
@@ -279,6 +449,7 @@ export function attackTurn(state: BattleState): BattleState {
         hitMultiplier: member.chargeAttack.multiplier,
         cap: member.chargeAttack.cap,
         criticalSeed: nextState.turn * 131 + index,
+        randomVariance: nextState.options.randomVariance,
       });
       const damage = breakdown.finalDamage + member.chargeAttack.fixedDamage;
       chainCount += 1;
@@ -308,6 +479,7 @@ export function attackTurn(state: BattleState): BattleState {
       hitMultiplier: 1,
       cap: NORMAL_ATTACK_CAP,
       criticalSeed: nextState.turn * 71 + index,
+      randomVariance: nextState.options.randomVariance,
     }, hits);
     nextState.enemy = damageEnemy(nextState.enemy, breakdown.finalDamage);
     nextState.party[index].chargeBar = Math.min(100, member.chargeBar + 10 + hits * 7);
@@ -351,6 +523,7 @@ export function attackTurn(state: BattleState): BattleState {
     nextState.enemy.chargeDiamonds + (nextState.enemy.mode === "break" ? 0 : 1),
   );
   nextState.chainCount = chainCount;
+  nextState = resolveEnemyTriggers(nextState, "afterAttack");
   nextState = resolveEnemySpecial(nextState);
   nextState = resolveCounters(nextState);
 
@@ -363,21 +536,22 @@ export function attackTurn(state: BattleState): BattleState {
 }
 
 function endTurn(state: BattleState, summary: string): BattleState {
-  const party = state.party.map((member) => ({
+  const triggered = resolveEnemyTriggers(state, "endTurn");
+  const party = triggered.party.map((member) => ({
     ...member,
     substituteForTeam: false,
     statusEffects: member.statusEffects.map(tickStatus).filter((effect) => effect.duration > 0),
     skills: member.skills.map(nextCooldown),
   }));
   const enemy: Enemy = {
-    ...state.enemy,
-    statusEffects: state.enemy.statusEffects.map(tickStatus).filter((effect) => effect.duration > 0),
-    mode: state.enemy.hp <= 0 ? "break" : state.enemy.mode,
+    ...triggered.enemy,
+    statusEffects: triggered.enemy.statusEffects.map(tickStatus).filter((effect) => effect.duration > 0),
+    mode: triggered.enemy.hp <= 0 ? "break" : triggered.enemy.mode,
   };
 
   return {
-    ...state,
-    turn: state.turn + 1,
+    ...triggered,
+    turn: triggered.turn + 1,
     party,
     enemy,
     lastActionSummary: summary,

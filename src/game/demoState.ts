@@ -44,18 +44,27 @@ export const demoWeaponGrid: WeaponGrid = {
       label: t.demo.labels.normalSupplemental,
       amount: 0,
       appliesTo: ["normal", "counter"],
+      cap: 100_000,
+      condition: "always",
+      sourceType: "weapon",
     },
     {
       id: "skill-supp",
       label: t.demo.labels.skillSupplemental,
       amount: 0,
       appliesTo: ["skill"],
+      cap: 100_000,
+      condition: "always",
+      sourceType: "weapon",
     },
     {
       id: "ca-supp",
       label: t.demo.labels.chargeAttackSupplemental,
       amount: 0,
       appliesTo: ["charge"],
+      cap: 100_000,
+      condition: "always",
+      sourceType: "weapon",
     },
   ],
 };
@@ -99,6 +108,9 @@ export const demoSkills: SkillDefinition[] = [
         id: "team-atk-up-buff",
         label: t.demo.labels.teamAttackUp,
         duration: DEMO_SKILL_VALUES.teamAttackBuff.duration,
+        polarity: "buff",
+        stackingSide: "normal",
+        stackingRule: "replace",
         modifiers: [
           {
             id: "team-atk-up-normal",
@@ -122,6 +134,10 @@ export const demoSkills: SkillDefinition[] = [
         id: "atk-def-down-debuff",
         label: t.demo.labels.attackDefenseDown,
         duration: DEMO_SKILL_VALUES.enemyAtkDefDown.duration,
+        polarity: "debuff",
+        stackingSide: "dual",
+        stackingRule: "replace",
+        accuracy: 0.9,
         attackDown: DEMO_SKILL_VALUES.enemyAtkDefDown.attackDown,
         defenseDown: DEMO_SKILL_VALUES.enemyAtkDefDown.defenseDown,
       },
@@ -139,6 +155,9 @@ export const demoSkills: SkillDefinition[] = [
         id: "self-unique-up-buff",
         label: t.demo.labels.uniqueAttackUp,
         duration: DEMO_SKILL_VALUES.selfUniqueBurst.duration,
+        polarity: "buff",
+        stackingSide: "unique",
+        stackingRule: "replace",
         modifiers: [
           {
             id: "self-unique-up-mod",
@@ -186,7 +205,14 @@ export const demoParty: Combatant[] = [
       { id: "seraphic-passive", label: t.demo.labels.seraphic, bucket: "seraphic", value: 0 },
     ],
     critical: [],
-    bonusDamage: [{ id: "normal-echo", label: t.demo.labels.bonusDamage, multiplier: 0 }],
+    bonusDamage: [
+      {
+        id: "normal-echo",
+        label: t.demo.labels.bonusDamage,
+        multiplier: 0,
+        appliesTo: ["normal", "counter"],
+      },
+    ],
     supplemental: [],
     capUp: [],
     statusEffects: [],
@@ -204,7 +230,29 @@ export const demoEnemy: Enemy = {
   maxChargeDiamonds: 3,
   mode: "normal",
   modeGauge: 1,
+  debuffResistance: 0.1,
   statusEffects: [],
+  triggers: [
+    {
+      id: "hp-50-special",
+      label: "HP 50% 触发",
+      timing: "afterAttack",
+      once: true,
+      priority: 100,
+      condition: { type: "hpBelow", threshold: 0.5 },
+      action: { type: "specialAttack", multiplier: 1.2 },
+    },
+    {
+      id: "overdrive-phase",
+      label: "Overdrive 阶段",
+      timing: "afterAttack",
+      once: true,
+      priority: 80,
+      condition: { type: "hpBelow", threshold: 0.7 },
+      action: { type: "phaseChange", mode: "overdrive" },
+    },
+  ],
+  triggeredIds: [],
 };
 
 export function createInitialBattleState(): BattleState {
@@ -224,5 +272,8 @@ export function createInitialBattleState(): BattleState {
     ],
     chainCount: 0,
     lastActionSummary: t.battle.ready,
+    options: {
+      randomVariance: true,
+    },
   };
 }

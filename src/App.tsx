@@ -42,6 +42,7 @@ function expectedNormalDamage(state: BattleState, member: Combatant) {
     hitMultiplier: 1,
     cap: 440000,
     criticalSeed: state.turn * 31,
+    randomVariance: state.options.randomVariance,
   });
 }
 
@@ -69,6 +70,15 @@ function statusDetails(effect: StatusEffect) {
       : []),
     ...(effect.defenseDown
       ? [formatTemplate(t.status.defenseDown, { value: `${percentValue(effect.defenseDown)}%` })]
+      : []),
+    ...(effect.defenseUp
+      ? [formatTemplate(t.status.defenseUp, { value: `${percentValue(effect.defenseUp)}%` })]
+      : []),
+    ...(effect.damageCut
+      ? [formatTemplate(t.status.damageCut, { value: `${percentValue(effect.damageCut)}%` })]
+      : []),
+    ...(effect.damageReduction
+      ? [formatTemplate(t.status.damageReduction, { value: `${percentValue(effect.damageReduction)}%` })]
       : []),
     ...(effect.modifiers ?? []).map((modifier) =>
       formatTemplate(t.status.modifier, {
@@ -114,7 +124,10 @@ function statusTone(effect: StatusEffect) {
       effect.capUp?.length ||
       effect.supplemental?.length ||
       effect.multiattack?.double ||
-      effect.multiattack?.triple,
+      effect.multiattack?.triple ||
+      effect.defenseUp ||
+      effect.damageCut ||
+      effect.damageReduction,
   );
 
   if (hasBuff && hasDebuff) {
@@ -465,6 +478,19 @@ export function App() {
               <RangeControl label={t.controls.chargeBar} max={100} onChange={setSelectedChargeBar} step={5} value={selectedMember.chargeBar} />
               <RangeControl label={t.controls.doubleAttack} max={100} onChange={(value) => setSelectedMultiattack("double", value)} value={Math.round(selectedMember.multiattack.double * 100)} />
               <RangeControl label={t.controls.tripleAttack} max={100} onChange={(value) => setSelectedMultiattack("triple", value)} value={Math.round(selectedMember.multiattack.triple * 100)} />
+              <label className="toggle-control">
+                <span>{t.controls.randomVariance}</span>
+                <input
+                  checked={battle.options.randomVariance}
+                  onChange={(event) =>
+                    setBattle((current) => ({
+                      ...current,
+                      options: { ...current.options, randomVariance: event.target.checked },
+                    }))
+                  }
+                  type="checkbox"
+                />
+              </label>
             </FieldGroup>
 
             <FieldGroup title={t.groups.attackBuckets}>
@@ -593,6 +619,10 @@ export function App() {
             <div>
               <Sparkles size={18} />
               {t.preview.crit} x{selectedPreview.criticalMultiplier}
+            </div>
+            <div>
+              <Sparkles size={18} />
+              随机 x{selectedPreview.varianceMultiplier}
             </div>
             <div>
               <Axe size={18} />
