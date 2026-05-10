@@ -271,9 +271,14 @@ h3 {
   background: rgba(143, 215, 199, 0.08);
 }
 
-.status-panel.debuff li {
+.status-panel li.debuff {
   border-left-color: #e65f5c;
   background: rgba(230, 95, 92, 0.08);
+}
+
+.status-panel li.mixed {
+  border-left-color: #f4d58b;
+  background: rgba(244, 213, 139, 0.08);
 }
 
 .status-panel span {
@@ -281,6 +286,26 @@ h3 {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.status-meta {
+  justify-content: flex-end;
+}
+
+.status-meta b {
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #101315;
+  background: #8fd7c7;
+  font-size: 0.7rem;
+}
+
+.debuff .status-meta b {
+  background: #e65f5c;
+}
+
+.mixed .status-meta b {
+  background: #f4d58b;
 }
 
 .status-panel em {

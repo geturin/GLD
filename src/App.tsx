@@ -107,33 +107,51 @@ function statusDetails(effect: StatusEffect) {
   return details.join(" / ");
 }
 
+function statusTone(effect: StatusEffect) {
+  const hasDebuff = Boolean(effect.attackDown || effect.defenseDown);
+  const hasBuff = Boolean(
+    effect.modifiers?.length ||
+      effect.capUp?.length ||
+      effect.supplemental?.length ||
+      effect.multiattack?.double ||
+      effect.multiattack?.triple,
+  );
+
+  if (hasBuff && hasDebuff) {
+    return "mixed";
+  }
+
+  return hasDebuff ? "debuff" : "buff";
+}
+
 function StatusList({
   effects,
   emptyText,
   title,
-  tone,
 }: {
   effects: StatusEffect[];
   emptyText: string;
   title: string;
-  tone: "buff" | "debuff";
 }) {
   return (
-    <section className={`status-panel ${tone}`}>
+    <section className="status-panel">
       <h3>{title}</h3>
       {effects.length === 0 ? (
         <p>{emptyText}</p>
       ) : (
         <ul>
           {effects.map((effect) => (
-            <li key={`${effect.id}-${effect.duration}`}>
+            <li className={statusTone(effect)} key={`${effect.id}-${effect.duration}`}>
               <span>
                 <strong>{effect.label}</strong>
-                <em>
-                  {formatTemplate(t.battle.remainingTurns, {
-                    turns: effect.duration,
-                  })}
-                </em>
+                <span className="status-meta">
+                  <b>{t.status[statusTone(effect)]}</b>
+                  <em>
+                    {formatTemplate(t.battle.remainingTurns, {
+                      turns: effect.duration,
+                    })}
+                  </em>
+                </span>
               </span>
               <small>{statusDetails(effect)}</small>
             </li>
@@ -425,9 +443,8 @@ export function App() {
 
           <StatusList
             effects={selectedMember.statusEffects}
-            emptyText={t.battle.noBuffs}
-            title={t.panels.buffs}
-            tone="buff"
+            emptyText={t.battle.noStatusEffects}
+            title={t.panels.statusEffects}
           />
 
           <section className="stat-dashboard" aria-label={`${selectedMember.name}${t.panels.damageLab}`}>
@@ -517,9 +534,8 @@ export function App() {
             </div>
             <StatusList
               effects={battle.enemy.statusEffects}
-              emptyText={t.battle.noDebuffs}
-              title={t.panels.debuffs}
-              tone="debuff"
+              emptyText={t.battle.noStatusEffects}
+              title={t.panels.statusEffects}
             />
           </section>
 
