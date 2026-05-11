@@ -108,6 +108,13 @@ export function collectDamageReduction(statusEffects: StatusEffect[] = []) {
   );
 }
 
+export function collectDamageTakenAmplified(statusEffects: StatusEffect[] = []) {
+  return statusEffects.reduce(
+    (total, effect) => total + (effect.damageTakenAmplified ?? 0) + (effect.sleepDamageTakenAmplified ?? 0),
+    0,
+  );
+}
+
 export function sumModifiers(modifiers: ScalarModifier[]) {
   return modifiers.reduce<Record<ModifierBucket, number>>(
     (totals, modifier) => {
@@ -298,8 +305,9 @@ export function resolveHit(context: DamageContext, hitCount = 1): DamageBreakdow
   const bonus = bonusInstances.reduce((total, instance) => total + instance.damage, 0);
   const damageCut = collectDamageCut(context.enemy.statusEffects);
   const damageReduction = collectDamageReduction(context.enemy.statusEffects);
+  const damageTakenAmplified = collectDamageTakenAmplified(context.enemy.statusEffects);
   const finalBeforeReduction = instances.reduce((total, instance) => total + instance.damage, 0);
-  const finalDamage = finalBeforeReduction * (1 - damageCut) * (1 - damageReduction);
+  const finalDamage = finalBeforeReduction * (1 + damageTakenAmplified) * (1 - damageCut) * (1 - damageReduction);
 
   return {
     baseDamage: Math.round(rawBase),

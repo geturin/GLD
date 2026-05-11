@@ -64,6 +64,25 @@ function statusStackingKey(effect: StatusEffect) {
   return `${effect.stackingSide ?? "unframed"}:${effect.stackingKey ?? effect.label}`;
 }
 
+function statusPower(effect: StatusEffect) {
+  return (
+    (effect.attackDown ?? 0) +
+    (effect.defenseDown ?? 0) +
+    (effect.defenseUp ?? 0) +
+    (effect.damageCut ?? 0) +
+    (effect.damageReduction ?? 0) +
+    (effect.damageTakenAmplified ?? 0) +
+    (effect.specialAttackDamageDown ?? 0) +
+    (effect.accuracyDown ?? 0) +
+    (effect.dodgeRate ?? 0) +
+    (effect.shield ?? 0) / 10000 +
+    (effect.turnDamage ?? 0) / 10000 +
+    (effect.modifiers?.reduce((sum, modifier) => sum + modifier.value, 0) ?? 0) +
+    (effect.capUp?.reduce((sum, cap) => sum + cap.value, 0) ?? 0) +
+    (effect.supplemental?.reduce((sum, rule) => sum + rule.amount / 100000, 0) ?? 0)
+  );
+}
+
 function mergeStatusEffects(currentEffects: StatusEffect[], incomingEffects: StatusEffect[]) {
   return incomingEffects.reduce((effects, incoming) => {
     const next = structuredClone(incoming);
@@ -98,16 +117,8 @@ function mergeStatusEffects(currentEffects: StatusEffect[], incomingEffects: Sta
     }
 
     const existing = effects[existingIndex];
-    const existingPower =
-      (existing.attackDown ?? 0) +
-      (existing.defenseDown ?? 0) +
-      (existing.defenseUp ?? 0) +
-      (existing.modifiers?.reduce((sum, modifier) => sum + modifier.value, 0) ?? 0);
-    const nextPower =
-      (next.attackDown ?? 0) +
-      (next.defenseDown ?? 0) +
-      (next.defenseUp ?? 0) +
-      (next.modifiers?.reduce((sum, modifier) => sum + modifier.value, 0) ?? 0);
+    const existingPower = statusPower(existing);
+    const nextPower = statusPower(next);
 
     return nextPower >= existingPower
       ? effects.map((effect, index) => (index === existingIndex ? next : effect))
@@ -140,6 +151,180 @@ function damageEnemy(enemy: Enemy, damage: number) {
   };
 }
 
+function effectiveMaxHp(member: Combatant, state: BattleState) {
+  const maxHpLowered = member.statusEffects.reduce((total, effect) => total + (effect.maxHpLowered ?? 0), 0);
+  return Math.max(1, Math.round((member.maxHp + state.weaponGrid.hp) * Math.max(0.01, 1 - maxHpLowered)));
+}
+
+function updateMember(state: BattleState, memberId: string, updater: (member: Combatant) => Combatant) {
+  return {
+    ...state,
+    party: state.party.map((member) => (member.id === memberId ? updater(member) : member)),
+  };
+}
+
+function consumeFirstStatus(member: Combatant, predicate: (effect: StatusEffect) => boolean) {
+  let consumed = false;
+  return {
+    ...member,
+    statusEffects: member.statusEffects.filter((effect) => {
+      if (!consumed && predicate(effect)) {
+        consumed = true;
+        return false;
+      }
+      return true;
+    }),
+  };
+}
+
+function shieldDamage(member: Combatant, damage: number) {
+  let remainingDamage = damage;
+  const statusEffects = member.statusEffects
+    .map((effect) => {
+      if (!effect.shield || remainingDamage <= 0) {
+        return effect;
+      }
+
+      const nextShield = Math.max(0, effect.shield - remainingDamage);
+      remainingDamage = Math.max(0, remainingDamage - effect.shield);
+      return { ...effect, shield: nextShield };
+    })
+    .filter((effect) => (effect.shield ?? 1) > 0);
+
+  return {
+    member: { ...member, statusEffects },
+    damage: remainingDamage,
+  };
+}
+
+function memberDodges(member: Combatant, seed: number) {
+  const dodgeRate = Math.min(1, member.statusEffects.reduce((total, effect) => total + (effect.dodgeRate ?? 0), 0));
+  return dodgeRate > 0 && deterministicRoll(seed, `${member.id}-dodge`) < dodgeRate;
+}
+
+function armoredReduction(member: Combatant, seed: number) {
+  return member.statusEffects.reduce((reduction, effect) => {
+    if (!effect.armored) {
+      return reduction;
+    }
+
+    return deterministicRoll(seed, `${effect.id}-armored`) < effect.armored.chance
+      ? Math.max(reduction, effect.armored.reduction)
+      : reduction;
+  }, 0);
+}
+
+function applyDamageToMember(state: BattleState, targetId: string, rawDamage: number, seed: number) {
+  const target = state.party.find((member) => member.id === targetId);
+  if (!target) {
+    return { state, damage: 0 };
+  }
+
+  if (memberDodges(target, seed)) {
+    return { state, damage: 0 };
+  }
+
+  let nextTarget = target;
+  if (nextTarget.statusEffects.some((effect) => effect.unchallenged)) {
+    nextTarget = consumeFirstStatus(nextTarget, (effect) => Boolean(effect.unchallenged));
+    return { state: updateMember(state, targetId, () => nextTarget), damage: 0 };
+  }
+
+  if (nextTarget.statusEffects.some((effect) => effect.mirrorImage)) {
+    nextTarget = consumeFirstStatus(nextTarget, (effect) => Boolean(effect.mirrorImage));
+    return { state: updateMember(state, targetId, () => nextTarget), damage: 0 };
+  }
+
+  const reducedDamage = Math.round(rawDamage * (1 - armoredReduction(nextTarget, seed)));
+  const shielded = shieldDamage(nextTarget, reducedDamage);
+  nextTarget = shielded.member;
+  let damage = shielded.damage;
+
+  const maxHp = effectiveMaxHp(nextTarget, state);
+  const chargeBarGainUp = nextTarget.statusEffects.reduce((total, effect) => total + (effect.chargeBarGainUp ?? 0), 0);
+  const nextHp = Math.max(0, nextTarget.hp - damage);
+  const gutsTriggered = nextHp <= 0 && nextTarget.statusEffects.some((effect) => effect.guts);
+  nextTarget = {
+    ...nextTarget,
+    hp: gutsTriggered ? 1 : nextHp,
+    chargeBar: Math.min(
+      100,
+      nextTarget.chargeBar + Math.max(3, Math.round((damage / maxHp) * 30 * (1 + chargeBarGainUp))),
+    ),
+    statusEffects: gutsTriggered
+      ? consumeFirstStatus(nextTarget, (effect) => Boolean(effect.guts)).statusEffects
+      : nextTarget.statusEffects,
+    counterStacks: nextTarget.counterStacks ? nextTarget.counterStacks + 1 : nextTarget.counterStacks,
+  };
+
+  if (gutsTriggered) {
+    damage = Math.max(0, target.hp - 1);
+  }
+
+  return {
+    state: updateMember(state, targetId, () => nextTarget),
+    damage,
+  };
+}
+
+function healMember(state: BattleState, memberId: string, amount: number) {
+  if (amount <= 0) {
+    return state;
+  }
+
+  return updateMember(state, memberId, (member) => ({
+    ...member,
+    hp: Math.min(effectiveMaxHp(member, state), member.hp + amount),
+  }));
+}
+
+function applyDrain(state: BattleState, memberId: string, damage: number) {
+  const member = state.party.find((candidate) => candidate.id === memberId);
+  if (!member || damage <= 0) {
+    return state;
+  }
+
+  const drain = member.statusEffects.reduce(
+    (total, effect) => ({
+      ratio: total.ratio + (effect.drain?.ratio ?? 0),
+      cap: total.cap + (effect.drain?.cap ?? 0),
+    }),
+    { ratio: 0, cap: 0 },
+  );
+  const heal = Math.min(Math.round(damage * drain.ratio), drain.cap);
+  return healMember(state, memberId, heal);
+}
+
+function chargeGainMultiplier(member: Combatant) {
+  return 1 + member.statusEffects.reduce((total, effect) => total + (effect.chargeBarGainUp ?? 0), 0);
+}
+
+function cannotAct(statusEffects: StatusEffect[], seed: number) {
+  return statusEffects.some(
+    (effect) =>
+      effect.cannotAct ||
+      (effect.cannotActChance !== undefined && deterministicRoll(seed, `${effect.id}-cannot-act`) < effect.cannotActChance),
+  );
+}
+
+function attackMisses(statusEffects: StatusEffect[], seed: number) {
+  const accuracyDown = Math.min(1, statusEffects.reduce((total, effect) => total + (effect.accuracyDown ?? 0), 0));
+  return accuracyDown > 0 && deterministicRoll(seed, "accuracy-down") < accuracyDown;
+}
+
+function chargeDiamondsFrozen(statusEffects: StatusEffect[]) {
+  return statusEffects.some((effect) => effect.chargeDiamondsFrozen);
+}
+
+function effectiveMaxChargeDiamonds(enemy: Enemy) {
+  const extraDiamonds = enemy.statusEffects.reduce((total, effect) => total + (effect.chargeDiamondsMaxUp ?? 0), 0);
+  return Math.max(1, enemy.maxChargeDiamonds + extraDiamonds);
+}
+
+function specialAttackDamageDown(statusEffects: StatusEffect[]) {
+  return Math.min(1, statusEffects.reduce((total, effect) => total + (effect.specialAttackDamageDown ?? 0), 0));
+}
+
 function applyPartyStatus(party: Combatant[], effects: StatusEffect[]) {
   if (effects.length === 0) {
     return party;
@@ -164,6 +349,10 @@ function applySelfStatus(party: Combatant[], actorId: string, effects: StatusEff
 }
 
 function debuffLands(state: BattleState, effect: StatusEffect, seed: number) {
+  if (state.enemy.statusEffects.some((status) => status.immune || status.veil)) {
+    return false;
+  }
+
   const resistanceDown = state.enemy.statusEffects.reduce(
     (total, status) => total + (status.debuffResistanceDown ?? 0),
     0,
@@ -174,7 +363,11 @@ function debuffLands(state: BattleState, effect: StatusEffect, seed: number) {
 }
 
 function resolveEnemySpecial(state: BattleState, multiplier = 1) {
-  if (state.enemy.chargeDiamonds < state.enemy.maxChargeDiamonds || state.enemy.hp <= 0) {
+  if (
+    state.enemy.chargeDiamonds < effectiveMaxChargeDiamonds(state.enemy) ||
+    state.enemy.hp <= 0 ||
+    chargeDiamondsFrozen(state.enemy.statusEffects)
+  ) {
     return state;
   }
 
@@ -193,34 +386,24 @@ function resolveEnemySpecial(state: BattleState, multiplier = 1) {
   const effectiveAttack = state.enemy.attack * Math.max(0.1, 1 - attackDown);
   const damageCut = collectDamageCut(target.statusEffects);
   const damageReduction = collectDamageReduction(target.statusEffects);
-  const effectiveMaxHp = target.maxHp + state.weaponGrid.hp;
-  const rawDamage = Math.round(
-    effectiveAttack *
-      (state.enemy.mode === "overdrive" ? 1.7 : 1.25) *
-      multiplier *
-      (1 - damageCut) *
-      (1 - damageReduction),
-  );
-  const nextParty = state.party.map((member) =>
-    member.id === target.id
-      ? {
-          ...member,
-          hp: Math.max(0, member.hp - rawDamage),
-          chargeBar: Math.min(
-            100,
-            member.chargeBar + Math.max(5, Math.round((rawDamage / effectiveMaxHp) * 50)),
-          ),
-          counterStacks: member.counterStacks ? member.counterStacks + 1 : member.counterStacks,
-        }
-      : member,
-  );
+  const misses = attackMisses(state.enemy.statusEffects, state.turn * 223);
+  const rawDamage = misses
+    ? 0
+    : Math.round(
+        effectiveAttack *
+          (state.enemy.mode === "overdrive" ? 1.7 : 1.25) *
+          multiplier *
+          (1 - specialAttackDamageDown(state.enemy.statusEffects)) *
+          (1 - damageCut) *
+          (1 - damageReduction),
+      );
+  const damaged = applyDamageToMember(state, target.id, rawDamage, state.turn * 211);
 
   return {
-    ...state,
-    party: nextParty,
+    ...damaged.state,
     enemy: { ...state.enemy, chargeDiamonds: 0 },
     log: [
-      ...state.log,
+      ...damaged.state.log,
       makeLog(
         state,
         state.enemy.name,
@@ -229,7 +412,7 @@ function resolveEnemySpecial(state: BattleState, multiplier = 1) {
           damage: rawDamage.toLocaleString(),
           target: target.name,
         }),
-        rawDamage,
+        damaged.damage,
         {
           feedback: "damage",
           targetId: target.id,
@@ -237,7 +420,7 @@ function resolveEnemySpecial(state: BattleState, multiplier = 1) {
           sourceId: state.enemy.id,
           sourceType: "enemy",
           sourceMotion: "attack",
-          hitDamages: [rawDamage],
+          hitDamages: [damaged.damage],
         },
       ),
     ],
@@ -249,6 +432,16 @@ function resolveEnemyNormalAttack(state: BattleState) {
     return state;
   }
 
+  if (cannotAct(state.enemy.statusEffects, state.turn * 307)) {
+    return {
+      ...state,
+      log: [
+        ...state.log,
+        makeLog(state, state.enemy.name, t.battle.attackNames.single, t.battle.enemyCannotAct),
+      ],
+    };
+  }
+
   const target =
     state.party.find((member) => member.substituteForTeam && member.hp > 0) ??
     state.party.find((member) => member.hp > 0);
@@ -264,39 +457,31 @@ function resolveEnemyNormalAttack(state: BattleState) {
   const effectiveAttack = state.enemy.attack * Math.max(0.1, 1 - attackDown);
   const damageCut = collectDamageCut(target.statusEffects);
   const damageReduction = collectDamageReduction(target.statusEffects);
-  const effectiveMaxHp = target.maxHp + state.weaponGrid.hp;
-  const rawDamage = Math.round(
-    effectiveAttack *
-      (state.enemy.mode === "overdrive" ? 1.1 : 1) *
-      (1 - damageCut) *
-      (1 - damageReduction),
-  );
-  const nextParty = state.party.map((member) =>
-    member.id === target.id
-      ? {
-          ...member,
-          hp: Math.max(0, member.hp - rawDamage),
-          chargeBar: Math.min(
-            100,
-            member.chargeBar + Math.max(3, Math.round((rawDamage / effectiveMaxHp) * 30)),
-          ),
-          counterStacks: member.counterStacks ? member.counterStacks + 1 : member.counterStacks,
-        }
-      : member,
-  );
+  const misses = attackMisses(state.enemy.statusEffects, state.turn * 331);
+  const rawDamage = misses
+    ? 0
+    : Math.round(
+        effectiveAttack *
+          (state.enemy.mode === "overdrive" ? 1.1 : 1) *
+          (1 - damageCut) *
+          (1 - damageReduction),
+      );
+  const damaged = applyDamageToMember(state, target.id, rawDamage, state.turn * 313);
+  const nextChargeDiamonds = chargeDiamondsFrozen(state.enemy.statusEffects)
+    ? state.enemy.chargeDiamonds
+    : Math.min(
+        effectiveMaxChargeDiamonds(state.enemy),
+        state.enemy.chargeDiamonds + (state.enemy.mode === "break" ? 0 : 1),
+      );
 
   return {
-    ...state,
-    party: nextParty,
+    ...damaged.state,
     enemy: {
       ...state.enemy,
-      chargeDiamonds: Math.min(
-        state.enemy.maxChargeDiamonds,
-        state.enemy.chargeDiamonds + (state.enemy.mode === "break" ? 0 : 1),
-      ),
+      chargeDiamonds: nextChargeDiamonds,
     },
     log: [
-      ...state.log,
+      ...damaged.state.log,
       makeLog(
         state,
         state.enemy.name,
@@ -305,7 +490,7 @@ function resolveEnemyNormalAttack(state: BattleState) {
           damage: rawDamage.toLocaleString(),
           target: target.name,
         }),
-        rawDamage,
+        damaged.damage,
         {
           feedback: "damage",
           targetId: target.id,
@@ -313,7 +498,7 @@ function resolveEnemyNormalAttack(state: BattleState) {
           sourceId: state.enemy.id,
           sourceType: "enemy",
           sourceMotion: "attack",
-          hitDamages: [rawDamage],
+          hitDamages: [damaged.damage],
         },
       ),
     ],
@@ -325,9 +510,71 @@ function resolveEnemyAction(state: BattleState) {
     return state;
   }
 
-  return state.enemy.chargeDiamonds >= state.enemy.maxChargeDiamonds
+  return state.enemy.chargeDiamonds >= effectiveMaxChargeDiamonds(state.enemy)
     ? resolveEnemySpecial(state)
     : resolveEnemyNormalAttack(state);
+}
+
+function turnHealing(member: Combatant, maxHp: number) {
+  return member.statusEffects.reduce((total, effect) => {
+    const refresh = effect.refresh ? Math.min(effect.refresh.amount, effect.refresh.cap ?? effect.refresh.amount) : 0;
+    const revitalize =
+      effect.revitalize && member.hp < maxHp
+        ? Math.min(effect.revitalize.heal, effect.revitalize.cap ?? effect.revitalize.heal)
+        : 0;
+    return total + refresh + revitalize;
+  }, 0);
+}
+
+function turnChargeBar(member: Combatant, maxHp: number) {
+  return member.statusEffects.reduce((total, effect) => {
+    const revitalizeCharge = effect.revitalize && member.hp >= maxHp ? effect.revitalize.chargeBar : 0;
+    return total + (effect.uplift ?? 0) + revitalizeCharge;
+  }, 0);
+}
+
+function turnDamage(statusEffects: StatusEffect[]) {
+  return statusEffects.reduce((total, effect) => total + (effect.turnDamage ?? 0), 0);
+}
+
+function hasDeathGrace(member: Combatant) {
+  return member.statusEffects.some((effect) => effect.stackingKey === "death-grace" || effect.id.includes("death-grace"));
+}
+
+function applyPartyTurnEndStatus(state: BattleState) {
+  return {
+    ...state,
+    party: state.party.map((member) => {
+      const maxHp = effectiveMaxHp(member, state);
+      const damage = turnDamage(member.statusEffects);
+      const damageAsHealing = hasDeathGrace(member) ? damage : 0;
+      const hpAfterDamage = hasDeathGrace(member) ? member.hp : Math.max(0, member.hp - damage);
+      const hp = Math.min(maxHp, hpAfterDamage + turnHealing(member, maxHp) + damageAsHealing);
+      const chargeBar = member.statusEffects.some((effect) => effect.autoignition || effect.instantCharge)
+        ? 100
+        : Math.min(100, member.chargeBar + turnChargeBar(member, maxHp));
+      const statusEffects = member.statusEffects.some((effect) => effect.stackingKey === "vaccine" || effect.id.includes("vaccine"))
+        ? member.statusEffects.filter((effect) => effect.polarity !== "debuff")
+        : member.statusEffects;
+
+      return {
+        ...member,
+        hp,
+        chargeBar,
+        statusEffects,
+      };
+    }),
+  };
+}
+
+function applyEnemyTurnEndStatus(state: BattleState) {
+  const damage = turnDamage(state.enemy.statusEffects);
+  return damage > 0
+    ? {
+        ...state,
+        enemy: damageEnemy(state.enemy, damage),
+      }
+    : state;
 }
 
 function resolveCounters(state: BattleState) {
@@ -393,7 +640,7 @@ function triggerConditionMet(state: BattleState, trigger: Enemy["triggers"][numb
   }
 
   if (condition.type === "chargeFull") {
-    return state.enemy.chargeDiamonds >= state.enemy.maxChargeDiamonds;
+    return state.enemy.chargeDiamonds >= effectiveMaxChargeDiamonds(state.enemy);
   }
 
   if (condition.type === "status") {
@@ -426,7 +673,7 @@ function resolveEnemyTriggers(state: BattleState, timing: Enemy["triggers"][numb
       enemy: {
         ...withTriggeredId.enemy,
         chargeDiamonds: Math.min(
-          withTriggeredId.enemy.maxChargeDiamonds,
+          effectiveMaxChargeDiamonds(withTriggeredId.enemy),
           withTriggeredId.enemy.chargeDiamonds + trigger.action.amount,
         ),
       },
@@ -451,7 +698,7 @@ function resolveEnemyTriggers(state: BattleState, timing: Enemy["triggers"][numb
   return resolveEnemySpecial(
     {
       ...withTriggeredId,
-      enemy: { ...withTriggeredId.enemy, chargeDiamonds: withTriggeredId.enemy.maxChargeDiamonds },
+      enemy: { ...withTriggeredId.enemy, chargeDiamonds: effectiveMaxChargeDiamonds(withTriggeredId.enemy) },
     },
     trigger.action.multiplier,
   );
@@ -488,7 +735,8 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
     );
     const totalDamage = breakdown.finalDamage;
     nextState.enemy = damageEnemy(nextState.enemy, totalDamage);
-    nextActor.chargeBar = Math.min(100, nextActor.chargeBar + (skill.chargeGain ?? 0));
+    nextActor.chargeBar = Math.min(100, nextActor.chargeBar + Math.round((skill.chargeGain ?? 0) * chargeGainMultiplier(nextActor)));
+    nextState = applyDrain(nextState, nextActor.id, totalDamage);
     nextState.log.push(
       makeLog(
         nextState,
@@ -550,7 +798,7 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
         nextState,
         nextActor.name,
         skill.label,
-        landedEffects.length > 0 ? t.battle.enemyDebuffed : "弱体未命中。",
+        landedEffects.length > 0 ? t.battle.enemyDebuffed : t.battle.debuffMissed,
         undefined,
         landedEffects.length > 0
           ? {
@@ -571,12 +819,43 @@ export function executeSkill(state: BattleState, actorId: string, skillId: strin
     nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.enemyDelayed));
   }
 
+  if (skill.kind === "dispel") {
+    const dispelCancel = nextState.enemy.statusEffects.find((effect) => effect.dispelCancel);
+    let removedBuff = false;
+    nextState.enemy.statusEffects = dispelCancel
+      ? nextState.enemy.statusEffects.filter((effect) => effect.id !== dispelCancel.id)
+      : nextState.enemy.statusEffects.filter((effect) => {
+          if (!removedBuff && effect.polarity === "buff") {
+            removedBuff = true;
+            return false;
+          }
+          return true;
+        });
+    nextState.log.push(
+      makeLog(
+        nextState,
+        nextActor.name,
+        skill.label,
+        dispelCancel ? t.battle.dispelCancelConsumed : t.battle.enemyBuffDispelled,
+      ),
+    );
+  }
+
   if (skill.kind === "substitute") {
     nextState.party[actorIndex] = {
       ...nextState.party[actorIndex],
       substituteForTeam: true,
       counterStacks: 0,
       statusEffects: [...nextState.party[actorIndex].statusEffects, ...structuredClone(skill.applies ?? [])],
+    };
+    nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.substituteCounter));
+  }
+
+  if (skill.kind === "counter") {
+    nextState.party[actorIndex] = {
+      ...nextState.party[actorIndex],
+      counterStacks: Math.max(1, nextState.party[actorIndex].counterStacks ?? 0),
+      statusEffects: mergeStatusEffects(nextState.party[actorIndex].statusEffects, structuredClone(skill.applies ?? [])),
     };
     nextState.log.push(makeLog(nextState, nextActor.name, skill.label, t.battle.substituteCounter));
   }
@@ -616,7 +895,8 @@ export function attackTurn(state: BattleState): BattleState {
       const damage = breakdown.finalDamage + member.chargeAttack.fixedDamage;
       chainCount += 1;
       nextState.enemy = damageEnemy(nextState.enemy, damage);
-      nextState.party[index].chargeBar = 10;
+      nextState.party[index].chargeBar = Math.round(10 * chargeGainMultiplier(member));
+      nextState = applyDrain(nextState, member.id, damage);
       nextState.log.push(
         makeLog(
           nextState,
@@ -656,7 +936,8 @@ export function attackTurn(state: BattleState): BattleState {
       randomVariance: nextState.options.randomVariance,
     }, hits);
     nextState.enemy = damageEnemy(nextState.enemy, breakdown.finalDamage);
-    nextState.party[index].chargeBar = Math.min(100, member.chargeBar + 10 + hits * 7);
+    nextState.party[index].chargeBar = Math.min(100, member.chargeBar + Math.round((10 + hits * 7) * chargeGainMultiplier(member)));
+    nextState = applyDrain(nextState, member.id, breakdown.finalDamage);
     nextState.log.push(
       makeLog(
         nextState,
@@ -721,7 +1002,7 @@ export function attackTurn(state: BattleState): BattleState {
 }
 
 function endTurn(state: BattleState, summary: string): BattleState {
-  const triggered = resolveEnemyTriggers(state, "endTurn");
+  const triggered = applyEnemyTurnEndStatus(applyPartyTurnEndStatus(resolveEnemyTriggers(state, "endTurn")));
   const party = triggered.party.map((member) => ({
     ...member,
     substituteForTeam: false,

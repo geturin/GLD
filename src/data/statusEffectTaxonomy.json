@@ -179,6 +179,81 @@
       "World of Death and Love"
     ]
   },
+  "implementedEffectFields": {
+    "damageFormula": [
+      "modifiers",
+      "capUp",
+      "supplemental",
+      "multiattack",
+      "defenseUp",
+      "defenseDown",
+      "attackDown",
+      "damageCut",
+      "damageReduction",
+      "damageTakenAmplified",
+      "sleepDamageTakenAmplified",
+      "specialAttackDamageDown"
+    ],
+    "incomingDamage": [
+      "accuracyDown",
+      "dodgeRate",
+      "armored",
+      "shield",
+      "mirrorImage",
+      "unchallenged",
+      "guts"
+    ],
+    "turnEnd": [
+      "refresh",
+      "revitalize",
+      "uplift",
+      "autoignition",
+      "instantCharge",
+      "turnDamage",
+      "drain",
+      "maxHpLowered",
+      "vaccine"
+    ],
+    "enemyAction": [
+      "chargeDiamondsMaxUp",
+      "chargeDiamondsFrozen",
+      "cannotAct",
+      "cannotActChance",
+      "debuffResistanceDown"
+    ],
+    "protectionAndRemoval": [
+      "veil",
+      "immune",
+      "dispelCancel"
+    ]
+  },
+  "blockedByMissingSystems": {
+    "multiEnemyTargeting": [
+      "Attack All",
+      "Hostility Up",
+      "Hostility Down"
+    ],
+    "summonSystem": [
+      "Summon Cooldown Cut"
+    ],
+    "omenSystem": [
+      "Cancel Omen",
+      "Cap Damage Taken"
+    ],
+    "frontBackPartySystem": [
+      "Sub Ally Support Skills",
+      "Switch Ally"
+    ],
+    "fieldSystem": [
+      "Field Effects"
+    ],
+    "lootSystem": [
+      "Bounty",
+      "Surplus Bounty",
+      "EXP Boost",
+      "RP Boost"
+    ]
+  },
   "battleEffects": [
     "Clear",
     "Create Potion",

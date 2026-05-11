@@ -107,6 +107,46 @@ export interface StatusEffect {
   damageCut?: number;
   damageReduction?: number;
   debuffResistanceDown?: number;
+  accuracyDown?: number;
+  dodgeRate?: number;
+  armored?: {
+    chance: number;
+    reduction: number;
+  };
+  shield?: number;
+  mirrorImage?: boolean;
+  unchallenged?: boolean;
+  guts?: boolean;
+  veil?: boolean;
+  immune?: boolean;
+  dispelCancel?: boolean;
+  refresh?: {
+    amount: number;
+    cap?: number;
+  };
+  revitalize?: {
+    heal: number;
+    cap?: number;
+    chargeBar: number;
+  };
+  uplift?: number;
+  chargeBarGainUp?: number;
+  instantCharge?: boolean;
+  autoignition?: boolean;
+  turnDamage?: number;
+  drain?: {
+    ratio: number;
+    cap: number;
+  };
+  damageTakenAmplified?: number;
+  specialAttackDamageDown?: number;
+  chargeDiamondsMaxUp?: number;
+  chargeDiamondsFrozen?: boolean;
+  cannotAct?: boolean;
+  cannotActChance?: number;
+  sleepDamageTakenAmplified?: number;
+  maxHpLowered?: number;
+  hostility?: number;
 }
 
 export interface SkillDefinition {

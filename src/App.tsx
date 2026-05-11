@@ -82,6 +82,30 @@ function statusDetails(effect: StatusEffect) {
     ...(effect.damageReduction
       ? [formatTemplate(t.status.damageReduction, { value: `${percentValue(effect.damageReduction)}%` })]
       : []),
+    ...(effect.damageTakenAmplified
+      ? [formatTemplate(t.status.damageTakenAmplified, { value: `${percentValue(effect.damageTakenAmplified)}%` })]
+      : []),
+    ...(effect.accuracyDown ? [formatTemplate(t.status.accuracyDown, { value: `${percentValue(effect.accuracyDown)}%` })] : []),
+    ...(effect.dodgeRate ? [formatTemplate(t.status.dodgeRate, { value: `${percentValue(effect.dodgeRate)}%` })] : []),
+    ...(effect.shield ? [formatTemplate(t.status.shield, { value: formatNumber(effect.shield) })] : []),
+    ...(effect.refresh
+      ? [formatTemplate(t.status.refresh, { value: formatNumber(Math.min(effect.refresh.amount, effect.refresh.cap ?? effect.refresh.amount)) })]
+      : []),
+    ...(effect.revitalize
+      ? [formatTemplate(t.status.revitalize, { heal: formatNumber(effect.revitalize.heal), chargeBar: effect.revitalize.chargeBar })]
+      : []),
+    ...(effect.uplift ? [formatTemplate(t.status.uplift, { value: effect.uplift })] : []),
+    ...(effect.turnDamage ? [formatTemplate(t.status.turnDamage, { value: formatNumber(effect.turnDamage) })] : []),
+    ...(effect.chargeDiamondsMaxUp ? [formatTemplate(t.status.chargeDiamondsMaxUp, { value: effect.chargeDiamondsMaxUp })] : []),
+    ...(effect.chargeDiamondsFrozen ? [t.status.chargeDiamondsFrozen] : []),
+    ...(effect.cannotAct ? [t.status.cannotAct] : []),
+    ...(effect.cannotActChance ? [formatTemplate(t.status.cannotActChance, { value: `${percentValue(effect.cannotActChance)}%` })] : []),
+    ...(effect.mirrorImage ? [t.status.mirrorImage] : []),
+    ...(effect.unchallenged ? [t.status.unchallenged] : []),
+    ...(effect.guts ? [t.status.guts] : []),
+    ...(effect.veil ? [t.status.veil] : []),
+    ...(effect.immune ? [t.status.immune] : []),
+    ...(effect.dispelCancel ? [t.status.dispelCancel] : []),
     ...(effect.modifiers ?? []).map((modifier) =>
       formatTemplate(t.status.modifier, {
         label: modifier.label,

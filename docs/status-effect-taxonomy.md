@@ -27,6 +27,25 @@ GLD 采用以下字段：
 - 复合状态可以做成一个 StatusEffect，但应使用复合 key，例如 `atk-def-down` + `dual`。
 - Local / Global / Field 要与普通状态分开，不要共用 side。
 
+## 当前已接入的效果字段
+
+以下字段已进入战斗流程或伤害公式：
+
+- 伤害公式：`modifiers`、`capUp`、`supplemental`、`multiattack`、`defenseUp`、`defenseDown`、`attackDown`、`damageCut`、`damageReduction`、`damageTakenAmplified`、`sleepDamageTakenAmplified`、`specialAttackDamageDown`
+- 受击处理：`accuracyDown`、`dodgeRate`、`armored`、`shield`、`mirrorImage`、`unchallenged`、`guts`
+- 回合结束：`refresh`、`revitalize`、`uplift`、`autoignition`、`instantCharge`、`turnDamage`、`drain`、`maxHpLowered`、`vaccine`
+- 敌方行动：`chargeDiamondsMaxUp`、`chargeDiamondsFrozen`、`cannotAct`、`cannotActChance`、`debuffResistanceDown`
+- 保护与移除接口：`veil`、`immune`、`dispelCancel`
+
+仍依赖未来系统的条目：
+
+- 多敌人/仇恨系统：`Attack All`、`Hostility Up`、`Hostility Down`
+- 召唤系统：`Summon Cooldown Cut`
+- 预兆系统：`Cancel Omen`、`Cap Damage Taken`
+- 前后排/换人系统：`Sub Ally Support Skills`、`Switch Ally`
+- 场地系统：Field Effects
+- 掉落/经验系统：`Bounty`、`EXP Boost`、`RP Boost`
+
 ## Buff 类型
 
 Offensive:
