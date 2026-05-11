@@ -38,6 +38,7 @@
             "label": "全队攻击力提升",
             "duration": 3,
             "polarity": "buff",
+            "stackingKey": "atk-up",
             "stackingSide": "normal",
             "stackingRule": "replace",
             "modifiers": [
@@ -64,6 +65,7 @@
             "label": "攻击 / 防御下降",
             "duration": 3,
             "polarity": "debuff",
+            "stackingKey": "atk-def-down",
             "stackingSide": "dual",
             "stackingRule": "replace",
             "accuracy": 0.9,
@@ -85,6 +87,7 @@
             "label": "独立攻刃提升",
             "duration": 1,
             "polarity": "buff",
+            "stackingKey": "unique-atk-up",
             "stackingSide": "unique",
             "stackingRule": "replace",
             "modifiers": [

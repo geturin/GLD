@@ -60,19 +60,22 @@ function tickStatus(effect: StatusEffect) {
   return { ...effect, duration: effect.duration - 1 };
 }
 
+function statusStackingKey(effect: StatusEffect) {
+  return `${effect.stackingSide ?? "unframed"}:${effect.stackingKey ?? effect.label}`;
+}
+
 function mergeStatusEffects(currentEffects: StatusEffect[], incomingEffects: StatusEffect[]) {
   return incomingEffects.reduce((effects, incoming) => {
     const next = structuredClone(incoming);
     const existingIndex = effects.findIndex((effect) => {
       if (next.stackingRule === "unique") {
-        return effect.id === next.id;
+        return statusStackingKey(effect) === statusStackingKey(next);
       }
 
       return (
         effect.stackingSide &&
         next.stackingSide &&
-        effect.stackingSide === next.stackingSide &&
-        effect.label === next.label
+        statusStackingKey(effect) === statusStackingKey(next)
       );
     });
 

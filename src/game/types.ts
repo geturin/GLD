@@ -8,10 +8,13 @@ export type StatusStackingRule = "replace" | "stack" | "unique";
 
 export type StatusStackingSide =
   | "normal"
+  | "single"
   | "dual"
   | "stackable"
   | "unique"
   | "local"
+  | "global"
+  | "field"
   | "special";
 
 export type DamageInstanceKind = "primary" | "bonus" | "supplemental";
@@ -86,6 +89,7 @@ export interface StatusEffect {
   label: string;
   duration: number;
   polarity?: StatusPolarity;
+  stackingKey?: string;
   stackingSide?: StatusStackingSide;
   stackingRule?: StatusStackingRule;
   stack?: number;
