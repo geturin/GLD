@@ -286,21 +286,14 @@ export function resolveHit(context: DamageContext, hitCount = 1): DamageBreakdow
         damage: Math.round(Math.min(rawBonus, bonusRule.cap ?? rawBonus) * hitCount),
       };
     });
-  const supplementalInstance: DamageInstance = {
-    id: "supplemental-total",
-    label: t.preview.supplemental,
-    kind: "supplemental",
-    damage: Math.round(supplemental),
-  };
   const instances: DamageInstance[] = [
     {
       id: "primary",
       label: context.kind,
       kind: "primary",
-      damage: Math.round(primaryDamage),
+      damage: Math.round(primaryDamage + supplemental),
     },
     ...bonusInstances,
-    ...(supplemental > 0 ? [supplementalInstance] : []),
   ];
   const bonus = bonusInstances.reduce((total, instance) => total + instance.damage, 0);
   const damageCut = collectDamageCut(context.enemy.statusEffects);

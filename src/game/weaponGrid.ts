@@ -60,6 +60,86 @@ function sumSkillBoost(effects: WeaponSkillEffects[]) {
   return effects.reduce((total, effect) => total + (effect.skillBoost ?? 0), 0);
 }
 
+function appliesKey(appliesTo: string[] = []) {
+  return [...appliesTo].sort().join("|");
+}
+
+function aggregateScalarModifiers(modifiers: ScalarModifier[]) {
+  return Array.from(
+    modifiers
+      .reduce((map, modifier) => {
+        const key = `${modifier.bucket}:${modifier.label}`;
+        const existing = map.get(key);
+        map.set(key, existing ? { ...existing, value: existing.value + modifier.value } : { ...modifier });
+        return map;
+      }, new Map<string, ScalarModifier>())
+      .values(),
+  );
+}
+
+function aggregateCapUp(rules: DamageCapModifier[]) {
+  return Array.from(
+    rules
+      .reduce((map, rule) => {
+        const key = `${rule.source}:${rule.label}:${appliesKey(rule.appliesTo)}`;
+        const existing = map.get(key);
+        map.set(key, existing ? { ...existing, value: existing.value + rule.value } : { ...rule });
+        return map;
+      }, new Map<string, DamageCapModifier>())
+      .values(),
+  );
+}
+
+function aggregateSupplemental(rules: SupplementalRule[]) {
+  return Array.from(
+    rules
+      .reduce((map, rule) => {
+        const key = `${rule.label}:${rule.condition ?? "always"}:${rule.sourceType ?? "weapon"}:${appliesKey(rule.appliesTo)}`;
+        const existing = map.get(key);
+        map.set(
+          key,
+          existing
+            ? {
+                ...existing,
+                amount: existing.amount + rule.amount,
+                cap:
+                  existing.cap === undefined && rule.cap === undefined
+                    ? undefined
+                    : (existing.cap ?? existing.amount) + (rule.cap ?? rule.amount),
+              }
+            : { ...rule },
+        );
+        return map;
+      }, new Map<string, SupplementalRule>())
+      .values(),
+  );
+}
+
+function aggregateBonusDamage(rules: BonusDamageRule[]) {
+  return Array.from(
+    rules
+      .reduce((map, rule) => {
+        const key = `${rule.label}:${appliesKey(rule.appliesTo)}:${rule.cap ?? "none"}`;
+        const existing = map.get(key);
+        map.set(
+          key,
+          existing
+            ? {
+                ...existing,
+                multiplier: existing.multiplier + rule.multiplier,
+                cap:
+                  existing.cap === undefined || rule.cap === undefined
+                    ? undefined
+                    : existing.cap + rule.cap,
+              }
+            : { ...rule },
+        );
+        return map;
+      }, new Map<string, BonusDamageRule>())
+      .values(),
+  );
+}
+
 export function recomputeWeaponGrid(
   grid: WeaponGrid,
   partySize: number,
@@ -88,13 +168,17 @@ export function recomputeWeaponGrid(
     activeMainhandCount,
     attack: activeWeapons.reduce((total, weapon) => total + weapon.attack, 0),
     hp: activeWeapons.reduce((total, weapon) => total + weapon.hp, 0),
-    modifiers: effects.flatMap((effect) => effect.modifiers ?? []).map((modifier) => boostScalar(modifier, skillBoost)),
+    modifiers: aggregateScalarModifiers(
+      effects.flatMap((effect) => effect.modifiers ?? []).map((modifier) => boostScalar(modifier, skillBoost)),
+    ),
     critical: effects.flatMap((effect) => effect.critical ?? []).map((rule) => boostCritical(rule, skillBoost)),
-    capUp: effects.flatMap((effect) => effect.capUp ?? []).map((rule) => boostCap(rule, skillBoost)),
-    supplemental: effects
-      .flatMap((effect) => effect.supplemental ?? [])
-      .map((rule) => boostSupplemental(rule, skillBoost)),
-    bonusDamage: effects.flatMap((effect) => effect.bonusDamage ?? []).map((rule) => boostBonus(rule, skillBoost)),
+    capUp: aggregateCapUp(effects.flatMap((effect) => effect.capUp ?? []).map((rule) => boostCap(rule, skillBoost))),
+    supplemental: aggregateSupplemental(
+      effects.flatMap((effect) => effect.supplemental ?? []).map((rule) => boostSupplemental(rule, skillBoost)),
+    ),
+    bonusDamage: aggregateBonusDamage(
+      effects.flatMap((effect) => effect.bonusDamage ?? []).map((rule) => boostBonus(rule, skillBoost)),
+    ),
     multiattack,
     defenseIgnore: Math.min(
       0.3,
