@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   Activity,
@@ -354,6 +354,15 @@ export function App() {
     battle.party.find((member) => member.id === selectedMemberId) ?? battle.party[0];
   const enemyHpRate = hpPercent(battle.enemy.hp, battle.enemy.maxHp);
   const effectiveMaxHp = selectedMember.maxHp + battle.weaponGrid.hp;
+
+  useEffect(() => {
+    if (!battleFeedback) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setBattleFeedback(null), 1050);
+    return () => window.clearTimeout(timeout);
+  }, [battleFeedback]);
 
   function feedbackFromLogs(logs: BattleLogEntry[]) {
     const reversedLogs = [...logs].reverse();
