@@ -124,6 +124,7 @@ export interface Combatant {
   name: string;
   role: string;
   spriteUrl?: string;
+  spriteSet?: Partial<Record<"idle" | "walk1" | "walk2" | "attack" | "hurt" | "skill" | "victory", string>>;
   maxHp: number;
   hp: number;
   baseAttack: number;
@@ -237,6 +238,9 @@ export interface BattleLogEntry {
   damage?: number;
   targetId?: string;
   targetType?: "enemy" | "party";
+  sourceId?: string;
+  sourceType?: "enemy" | "party";
+  sourceMotion?: "attack" | "skill" | "hurt" | "victory";
   feedback?: "damage" | "buff" | "debuff";
   hitDamages?: number[];
 }

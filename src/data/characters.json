@@ -3,7 +3,16 @@
     "id": "demo-hero",
     "name": "阿斯特",
     "role": "单角色战斗 Demo",
-    "spriteUrl": "/assets/characters/aster-pixel.svg",
+    "spriteUrl": "/assets/characters/split-transparent/char_01/idle.png",
+    "spriteSet": {
+      "idle": "/assets/characters/split-transparent/char_01/idle.png",
+      "walk1": "/assets/characters/split-transparent/char_01/walk_1.png",
+      "walk2": "/assets/characters/split-transparent/char_01/walk_2.png",
+      "attack": "/assets/characters/split-transparent/char_01/attack.png",
+      "hurt": "/assets/characters/split-transparent/char_01/hurt.png",
+      "skill": "/assets/characters/split-transparent/char_01/skill.png",
+      "victory": "/assets/characters/split-transparent/char_01/victory.png"
+    },
     "maxHp": 16000,
     "hp": 16000,
     "baseAttack": 9800,

@@ -199,6 +199,7 @@ h3 {
   height: 64px;
   object-fit: contain;
   image-rendering: pixelated;
+  image-rendering: crisp-edges;
   filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.24));
 }
 
@@ -679,6 +680,16 @@ h3 {
   animation: card-status-flare 780ms ease-out;
 }
 
+.party-command-card.acting img {
+  animation: card-actor-pop 520ms steps(2, end);
+}
+
+.party-command-card.acting.skill {
+  box-shadow:
+    inset 0 0 0 1px rgba(228, 250, 225, 0.24),
+    0 0 18px rgba(143, 215, 199, 0.48);
+}
+
 .party-command-card strong,
 .party-command-card span {
   position: relative;
@@ -928,6 +939,19 @@ h3 {
     box-shadow:
       inset 0 0 0 1px rgba(228, 250, 225, 0.24),
       0 0 0 rgba(245, 229, 166, 0);
+  }
+}
+
+@keyframes card-actor-pop {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  36% {
+    transform: translate(4px, -3px) scale(1.08);
+  }
+  68% {
+    transform: translate(-2px, 1px) scale(1.02);
   }
 }
 

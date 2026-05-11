@@ -1,0 +1,63 @@
+{
+  "source": "pixel_sprite_animation_reference_sheet.png",
+  "layout": {
+    "characters": 5,
+    "actions": [
+      "idle",
+      "walk_1",
+      "walk_2",
+      "attack",
+      "hurt",
+      "skill",
+      "victory"
+    ],
+    "note": "Each char_XX folder contains one transparent PNG per action."
+  },
+  "files": {
+    "char_01": [
+      "char_01/idle.png",
+      "char_01/walk_1.png",
+      "char_01/walk_2.png",
+      "char_01/attack.png",
+      "char_01/hurt.png",
+      "char_01/skill.png",
+      "char_01/victory.png"
+    ],
+    "char_02": [
+      "char_02/idle.png",
+      "char_02/walk_1.png",
+      "char_02/walk_2.png",
+      "char_02/attack.png",
+      "char_02/hurt.png",
+      "char_02/skill.png",
+      "char_02/victory.png"
+    ],
+    "char_03": [
+      "char_03/idle.png",
+      "char_03/walk_1.png",
+      "char_03/walk_2.png",
+      "char_03/attack.png",
+      "char_03/hurt.png",
+      "char_03/skill.png",
+      "char_03/victory.png"
+    ],
+    "char_04": [
+      "char_04/idle.png",
+      "char_04/walk_1.png",
+      "char_04/walk_2.png",
+      "char_04/attack.png",
+      "char_04/hurt.png",
+      "char_04/skill.png",
+      "char_04/victory.png"
+    ],
+    "char_05": [
+      "char_05/idle.png",
+      "char_05/walk_1.png",
+      "char_05/walk_2.png",
+      "char_05/attack.png",
+      "char_05/hurt.png",
+      "char_05/skill.png",
+      "char_05/victory.png"
+    ]
+  }
+}

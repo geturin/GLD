@@ -260,6 +260,9 @@ interface BattleFeedback {
   kind: "damage" | "buff" | "debuff";
   targetId?: string;
   targetType?: "enemy" | "party";
+  sourceId?: string;
+  sourceType?: "enemy" | "party";
+  sourceMotion?: "attack" | "skill" | "hurt" | "victory";
   hitDamages: number[];
 }
 
@@ -280,7 +283,16 @@ function createBlankCharacter(): Combatant {
     id: `character-${Date.now()}`,
     name: "新角色",
     role: "自定义角色",
-    spriteUrl: "/assets/characters/aster-pixel.svg",
+    spriteUrl: "/assets/characters/split-transparent/char_01/idle.png",
+    spriteSet: {
+      idle: "/assets/characters/split-transparent/char_01/idle.png",
+      walk1: "/assets/characters/split-transparent/char_01/walk_1.png",
+      walk2: "/assets/characters/split-transparent/char_01/walk_2.png",
+      attack: "/assets/characters/split-transparent/char_01/attack.png",
+      hurt: "/assets/characters/split-transparent/char_01/hurt.png",
+      skill: "/assets/characters/split-transparent/char_01/skill.png",
+      victory: "/assets/characters/split-transparent/char_01/victory.png",
+    },
     maxHp: 10000,
     hp: 10000,
     baseAttack: 8000,
@@ -352,6 +364,9 @@ export function App() {
         kind: "damage" as const,
         targetId: damageLog.targetId,
         targetType: damageLog.targetType,
+        sourceId: damageLog.sourceId,
+        sourceType: damageLog.sourceType,
+        sourceMotion: damageLog.sourceMotion,
         hitDamages: damageLog.hitDamages ?? [],
       };
     }
@@ -363,6 +378,9 @@ export function App() {
         kind: statusLog.feedback,
         targetId: statusLog.targetId,
         targetType: statusLog.targetType,
+        sourceId: statusLog.sourceId,
+        sourceType: statusLog.sourceType,
+        sourceMotion: statusLog.sourceMotion,
         hitDamages: [],
       };
     }
@@ -376,6 +394,25 @@ export function App() {
       setBattleFeedback(feedbackFromLogs(next.log.slice(current.log.length)));
       return next;
     });
+  }
+
+  function memberSprite(member: Combatant) {
+    if (battle.enemy.hp <= 0 && member.spriteSet?.victory) {
+      return member.spriteSet.victory;
+    }
+
+    if (battleFeedback?.targetType === "party" && battleFeedback.targetId === member.id) {
+      if (battleFeedback.kind === "damage") {
+        return member.spriteSet?.hurt ?? member.spriteUrl;
+      }
+      return member.spriteSet?.skill ?? member.spriteUrl;
+    }
+
+    if (battleFeedback?.sourceType === "party" && battleFeedback.sourceId === member.id) {
+      return member.spriteSet?.[battleFeedback.sourceMotion ?? "attack"] ?? member.spriteUrl;
+    }
+
+    return member.spriteSet?.idle ?? member.spriteUrl;
   }
 
   function updateSelectedMember(updater: (member: Combatant) => Combatant) {
@@ -661,11 +698,11 @@ export function App() {
                 onClick={() => setSelectedMemberId(member.id)}
                 type="button"
               >
-                {member.spriteUrl ? (
+                {memberSprite(member) ? (
                   <img
                     alt={spriteAlt(member.name)}
                     className="party-card-sprite"
-                    src={member.spriteUrl}
+                    src={memberSprite(member)}
                   />
                 ) : null}
                 <span>
@@ -828,13 +865,17 @@ export function App() {
                     battleFeedback?.targetType === "party" && battleFeedback.targetId === member.id
                       ? battleFeedback.kind
                       : ""
+                  } ${
+                    battleFeedback?.sourceType === "party" && battleFeedback.sourceId === member.id
+                      ? `acting ${battleFeedback.sourceMotion ?? "attack"}`
+                      : ""
                   }`}
                   key={member.id}
                   onClick={() => setSelectedMemberId(member.id)}
                   type="button"
                 >
-                  {member.spriteUrl ? (
-                    <img alt={spriteAlt(member.name)} src={member.spriteUrl} />
+                  {memberSprite(member) ? (
+                    <img alt={spriteAlt(member.name)} src={memberSprite(member)} />
                   ) : null}
                   <strong>{member.name}</strong>
                   <span>
