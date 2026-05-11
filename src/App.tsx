@@ -256,9 +256,25 @@ function RangeControl({
   );
 }
 
-type DataEditorKind = "weapons" | "characters" | "enemies";
+type DataEditorKind =
+  | "weapons"
+  | "characters"
+  | "enemies"
+  | "weaponGridTemplates"
+  | "statusEffectTaxonomy";
 
-const editorKinds: DataEditorKind[] = ["weapons", "characters", "enemies"];
+const editorKinds: DataEditorKind[] = [
+  "weapons",
+  "characters",
+  "enemies",
+  "weaponGridTemplates",
+  "statusEffectTaxonomy",
+];
+const documentEditorKinds = new Set<DataEditorKind>(["statusEffectTaxonomy"]);
+
+function isDocumentEditorKind(kind: DataEditorKind): kind is "statusEffectTaxonomy" {
+  return documentEditorKinds.has(kind);
+}
 
 interface BattleFeedback {
   id: number;
@@ -341,8 +357,30 @@ function createBlankEnemy(): Enemy {
   };
 }
 
+function createBlankWeaponGridTemplate() {
+  return {
+    id: `grid-${Date.now()}`,
+    name: "新武器盘",
+    mainhands: [null, null, null, null],
+    subSlots: Array.from({ length: 9 }, () => null),
+  };
+}
+
 function itemName(item: { id: string; name: string }) {
   return `${item.name} (${item.id})`;
+}
+
+async function persistDataSet(kind: DataEditorKind, data: unknown) {
+  const response = await fetch(`/api/data/${kind}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data, null, 2),
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "服务器保存失败。");
+  }
 }
 
 export function App() {
@@ -605,7 +643,10 @@ export function App() {
     selectedMember.bonusDamage.find((rule) => rule.id === "normal-echo")?.multiplier ?? 0,
   );
   const activeMainhands = Math.min(MAINHAND_SLOT_COUNT, battle.party.length);
-  const editorItems = dataSets[editorKind] as Array<{ id: string; name: string }>;
+  const isDocumentEditor = isDocumentEditorKind(editorKind);
+  const editorItems = isDocumentEditor
+    ? [{ id: editorKind, name: t.dataEditor.kinds[editorKind] }]
+    : (dataSets[editorKind] as Array<{ id: string; name: string }>);
 
   function resetBattle(nextDataSets = dataSets) {
     const nextBattle = createInitialBattleState(nextDataSets);
@@ -616,6 +657,14 @@ export function App() {
   }
 
   function selectEditorItem(kind: DataEditorKind, id: string) {
+    if (isDocumentEditorKind(kind)) {
+      setEditorKind(kind);
+      setEditorId(kind);
+      setEditorDraft(JSON.stringify(dataSets[kind], null, 2));
+      setEditorError("");
+      return;
+    }
+
     const items = dataSets[kind] as Array<{ id: string; name: string }>;
     const item = items.find((candidate) => candidate.id === id) ?? items[0];
     setEditorKind(kind);
@@ -624,9 +673,20 @@ export function App() {
     setEditorError("");
   }
 
-  function saveEditorDraft() {
+  async function saveEditorDraft() {
     try {
-      const parsed = JSON.parse(editorDraft) as { id: string; name: string };
+      const parsed = JSON.parse(editorDraft) as { id?: string; name?: string };
+
+      if (isDocumentEditorKind(editorKind)) {
+        const nextDataSets = structuredClone(dataSets);
+        nextDataSets.statusEffectTaxonomy = parsed as typeof nextDataSets.statusEffectTaxonomy;
+        await persistDataSet(editorKind, parsed);
+        setDataSets(nextDataSets);
+        setEditorDraft(JSON.stringify(parsed, null, 2));
+        setEditorError("");
+        return;
+      }
+
       if (!parsed.id || !parsed.name) {
         throw new Error("数据必须包含 id 和 name。");
       }
@@ -636,11 +696,12 @@ export function App() {
       const existingIndex = items.findIndex((item) => item.id === editorId);
 
       if (existingIndex >= 0) {
-        items[existingIndex] = parsed;
+        items[existingIndex] = parsed as { id: string; name: string };
       } else {
-        items.push(parsed);
+        items.push(parsed as { id: string; name: string });
       }
 
+      await persistDataSet(editorKind, items);
       setDataSets(nextDataSets);
       setEditorId(parsed.id);
       setEditorDraft(JSON.stringify(parsed, null, 2));
@@ -652,12 +713,20 @@ export function App() {
   }
 
   function addEditorItem() {
+    if (isDocumentEditorKind(editorKind)) {
+      setEditorDraft(JSON.stringify(dataSets[editorKind], null, 2));
+      setEditorError("整份管理表不能新增条目，请直接编辑 JSON 内容。");
+      return;
+    }
+
     const item =
       editorKind === "weapons"
         ? createBlankWeapon()
         : editorKind === "characters"
           ? createBlankCharacter()
-          : createBlankEnemy();
+          : editorKind === "enemies"
+            ? createBlankEnemy()
+            : createBlankWeaponGridTemplate();
     const nextDataSets = structuredClone(dataSets);
     (nextDataSets[editorKind] as Array<{ id: string; name: string }>).push(item);
     setDataSets(nextDataSets);

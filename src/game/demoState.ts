@@ -1,5 +1,6 @@
 import characterData from "../data/characters.json";
 import enemyData from "../data/enemies.json";
+import statusEffectTaxonomyData from "../data/statusEffectTaxonomy.json";
 import { t } from "../i18n/zhCN";
 import type { BattleState, Combatant, Enemy, WeaponDefinition } from "./types";
 import {
@@ -17,6 +18,7 @@ export interface GameDataSets {
   enemies: Enemy[];
   weapons: WeaponDefinition[];
   weaponGridTemplates: WeaponGridTemplate[];
+  statusEffectTaxonomy: typeof statusEffectTaxonomyData;
 }
 
 export function createDefaultDataSets(): GameDataSets {
@@ -25,6 +27,7 @@ export function createDefaultDataSets(): GameDataSets {
     enemies: structuredClone(DEFAULT_ENEMIES),
     weapons: structuredClone(DEFAULT_WEAPON_CATALOG),
     weaponGridTemplates: structuredClone(DEFAULT_WEAPON_GRID_TEMPLATES),
+    statusEffectTaxonomy: structuredClone(statusEffectTaxonomyData),
   };
 }
 
