@@ -241,6 +241,92 @@ function resolveEnemySpecial(state: BattleState, multiplier = 1) {
   };
 }
 
+function resolveEnemyNormalAttack(state: BattleState) {
+  if (state.enemy.hp <= 0) {
+    return state;
+  }
+
+  const target =
+    state.party.find((member) => member.substituteForTeam && member.hp > 0) ??
+    state.party.find((member) => member.hp > 0);
+
+  if (!target) {
+    return state;
+  }
+
+  const attackDown = state.enemy.statusEffects.reduce(
+    (total, effect) => total + (effect.attackDown ?? 0),
+    0,
+  );
+  const effectiveAttack = state.enemy.attack * Math.max(0.1, 1 - attackDown);
+  const damageCut = collectDamageCut(target.statusEffects);
+  const damageReduction = collectDamageReduction(target.statusEffects);
+  const effectiveMaxHp = target.maxHp + state.weaponGrid.hp;
+  const rawDamage = Math.round(
+    effectiveAttack *
+      (state.enemy.mode === "overdrive" ? 1.1 : 1) *
+      (1 - damageCut) *
+      (1 - damageReduction),
+  );
+  const nextParty = state.party.map((member) =>
+    member.id === target.id
+      ? {
+          ...member,
+          hp: Math.max(0, member.hp - rawDamage),
+          chargeBar: Math.min(
+            100,
+            member.chargeBar + Math.max(3, Math.round((rawDamage / effectiveMaxHp) * 30)),
+          ),
+          counterStacks: member.counterStacks ? member.counterStacks + 1 : member.counterStacks,
+        }
+      : member,
+  );
+
+  return {
+    ...state,
+    party: nextParty,
+    enemy: {
+      ...state.enemy,
+      chargeDiamonds: Math.min(
+        state.enemy.maxChargeDiamonds,
+        state.enemy.chargeDiamonds + (state.enemy.mode === "break" ? 0 : 1),
+      ),
+    },
+    log: [
+      ...state.log,
+      makeLog(
+        state,
+        state.enemy.name,
+        t.battle.attackNames.single,
+        format(t.battle.takesDamage, {
+          damage: rawDamage.toLocaleString(),
+          target: target.name,
+        }),
+        rawDamage,
+        {
+          feedback: "damage",
+          targetId: target.id,
+          targetType: "party",
+          sourceId: state.enemy.id,
+          sourceType: "enemy",
+          sourceMotion: "attack",
+          hitDamages: [rawDamage],
+        },
+      ),
+    ],
+  };
+}
+
+function resolveEnemyAction(state: BattleState) {
+  if (state.enemy.hp <= 0) {
+    return state;
+  }
+
+  return state.enemy.chargeDiamonds >= state.enemy.maxChargeDiamonds
+    ? resolveEnemySpecial(state)
+    : resolveEnemyNormalAttack(state);
+}
+
 function resolveCounters(state: BattleState) {
   const counterUsers = state.party.filter((member) => (member.counterStacks ?? 0) > 0 && member.hp > 0);
   if (counterUsers.length === 0 || state.enemy.hp <= 0) {
@@ -618,13 +704,9 @@ export function attackTurn(state: BattleState): BattleState {
     );
   }
 
-  nextState.enemy.chargeDiamonds = Math.min(
-    nextState.enemy.maxChargeDiamonds,
-    nextState.enemy.chargeDiamonds + (nextState.enemy.mode === "break" ? 0 : 1),
-  );
   nextState.chainCount = chainCount;
   nextState = resolveEnemyTriggers(nextState, "afterAttack");
-  nextState = resolveEnemySpecial(nextState);
+  nextState = resolveEnemyAction(nextState);
   nextState = resolveCounters(nextState);
 
   return endTurn(

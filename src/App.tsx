@@ -22,6 +22,7 @@ import {
 } from "./game/weaponGrid";
 import type {
   AttackKind,
+  BattleSourceMotion,
   BattleLogEntry,
   Combatant,
   Enemy,
@@ -262,9 +263,11 @@ interface BattleFeedback {
   targetType?: "enemy" | "party";
   sourceId?: string;
   sourceType?: "enemy" | "party";
-  sourceMotion?: "attack" | "skill" | "hurt" | "victory";
+  sourceMotion?: BattleSourceMotion;
   hitDamages: number[];
 }
+
+type BattleFeedbackKind = BattleFeedback["kind"];
 
 function createBlankWeapon(): WeaponDefinition {
   return {
@@ -342,6 +345,7 @@ export function App() {
   const [dataSets, setDataSets] = useState(createDefaultDataSets);
   const [battle, setBattle] = useState(() => createInitialBattleState(dataSets));
   const [battleFeedback, setBattleFeedback] = useState<BattleFeedback | null>(null);
+  const [battleFeedbackQueue, setBattleFeedbackQueue] = useState<BattleFeedback[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState(battle.party[0].id);
   const [editorKind, setEditorKind] = useState<DataEditorKind>("weapons");
   const [editorId, setEditorId] = useState(dataSets.weapons[0]?.id ?? "");
@@ -360,47 +364,51 @@ export function App() {
       return undefined;
     }
 
-    const timeout = window.setTimeout(() => setBattleFeedback(null), 1050);
+    const timeout = window.setTimeout(() => {
+      setBattleFeedbackQueue((queue) => {
+        const [nextFeedback, ...remaining] = queue;
+        setBattleFeedback(nextFeedback ?? null);
+        return remaining;
+      });
+    }, 1050);
     return () => window.clearTimeout(timeout);
   }, [battleFeedback]);
 
-  function feedbackFromLogs(logs: BattleLogEntry[]) {
-    const reversedLogs = [...logs].reverse();
-    const damageLog = reversedLogs.find((entry) => entry.feedback === "damage" && entry.hitDamages?.length);
-    if (damageLog) {
-      return {
-        id: Date.now(),
-        kind: "damage" as const,
-        targetId: damageLog.targetId,
-        targetType: damageLog.targetType,
-        sourceId: damageLog.sourceId,
-        sourceType: damageLog.sourceType,
-        sourceMotion: damageLog.sourceMotion,
-        hitDamages: damageLog.hitDamages ?? [],
-      };
-    }
+  function feedbacksFromLogs(logs: BattleLogEntry[]) {
+    const now = Date.now();
+    return logs
+      .filter((entry) => entry.feedback)
+      .map((entry, index) => {
+        const kind: BattleFeedbackKind =
+          entry.feedback === "debuff" ? "debuff" : entry.feedback === "buff" ? "buff" : "damage";
+        return {
+          id: now + index,
+          kind,
+          targetId: entry.targetId,
+          targetType: entry.targetType,
+          sourceId: entry.sourceId,
+          sourceType: entry.sourceType,
+          sourceMotion: entry.sourceMotion,
+          hitDamages: entry.hitDamages ?? [],
+        };
+      });
+  }
 
-    const statusLog = reversedLogs.find((entry) => entry.feedback === "buff" || entry.feedback === "debuff");
-    if (statusLog?.feedback === "buff" || statusLog?.feedback === "debuff") {
-      return {
-        id: Date.now(),
-        kind: statusLog.feedback,
-        targetId: statusLog.targetId,
-        targetType: statusLog.targetType,
-        sourceId: statusLog.sourceId,
-        sourceType: statusLog.sourceType,
-        sourceMotion: statusLog.sourceMotion,
-        hitDamages: [],
-      };
-    }
+  function playFeedbacks(feedbacks: BattleFeedback[]) {
+    const [firstFeedback, ...remaining] = feedbacks;
+    setBattleFeedback(firstFeedback ?? null);
+    setBattleFeedbackQueue(remaining);
+  }
 
-    return null;
+  function playResetFeedbacks() {
+    setBattleFeedback(null);
+    setBattleFeedbackQueue([]);
   }
 
   function applyBattleAction(action: (current: typeof battle) => typeof battle) {
     setBattle((current) => {
       const next = action(current);
-      setBattleFeedback(feedbackFromLogs(next.log.slice(current.log.length)));
+      playFeedbacks(feedbacksFromLogs(next.log.slice(current.log.length)));
       return next;
     });
   }
@@ -596,7 +604,7 @@ export function App() {
   function resetBattle(nextDataSets = dataSets) {
     const nextBattle = createInitialBattleState(nextDataSets);
     setBattle(nextBattle);
-    setBattleFeedback(null);
+    playResetFeedbacks();
     setSelectedMemberId(nextBattle.party[0]?.id ?? "");
   }
 

@@ -229,6 +229,8 @@ export interface BattleOptions {
   randomVariance: boolean;
 }
 
+export type BattleSourceMotion = "attack" | "skill" | "hurt" | "victory";
+
 export interface BattleLogEntry {
   id: string;
   turn: number;
@@ -240,7 +242,7 @@ export interface BattleLogEntry {
   targetType?: "enemy" | "party";
   sourceId?: string;
   sourceType?: "enemy" | "party";
-  sourceMotion?: "attack" | "skill" | "hurt" | "victory";
+  sourceMotion?: BattleSourceMotion;
   feedback?: "damage" | "buff" | "debuff";
   hitDamages?: number[];
 }
