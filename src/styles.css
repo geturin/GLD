@@ -521,7 +521,17 @@ h3 {
   width: min(34%, 260px);
   padding: 10px;
   border: 2px solid rgba(245, 229, 166, 0.72);
+  color: inherit;
   background: rgba(17, 31, 31, 0.82);
+  cursor: pointer;
+  text-align: left;
+}
+
+.enemy-overview.selected,
+.enemy-stage.selected,
+.party-command-card.selected {
+  outline: 3px solid rgba(245, 229, 166, 0.82);
+  outline-offset: 3px;
 }
 
 .enemy-overview strong,
@@ -541,7 +551,7 @@ h3 {
 
 .enemy-mini-hp {
   position: relative;
-  height: 18px;
+  height: 22px;
   overflow: hidden;
   border: 1px solid rgba(245, 229, 166, 0.7);
   background: rgba(0, 0, 0, 0.34);
@@ -555,7 +565,8 @@ h3 {
 
 .enemy-mini-hp span {
   position: absolute;
-  inset: 1px 6px auto auto;
+  z-index: 1;
+  inset: 3px 6px auto auto;
   color: #f7f4d0;
   font-size: 0.72rem;
   font-weight: 900;
@@ -566,6 +577,10 @@ h3 {
   inset: 96px 8% 172px;
   display: grid;
   place-items: center;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
 }
 
 .enemy-stage.damage .dungeon-enemy-sprite {
@@ -713,16 +728,22 @@ h3 {
 }
 
 .party-command-card span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 8px;
   color: #eaf9db;
   font-size: 0.74rem;
   font-weight: 800;
 }
 
+.party-command-card small {
+  color: #f5e5a6;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
 .party-command-card b {
+  grid-column: 1 / -1;
   color: #f5e5a6;
 }
 

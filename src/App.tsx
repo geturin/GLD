@@ -57,6 +57,10 @@ function percentValue(value: number) {
   return Math.round(value * 100);
 }
 
+function formatPercent(current: number, max: number) {
+  return `${Math.round(Math.max(0, Math.min(100, (current / max) * 100)))}%`;
+}
+
 function formatTemplate(template: string, values: Record<string, string | number>) {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
 }
@@ -347,6 +351,7 @@ export function App() {
   const [battleFeedback, setBattleFeedback] = useState<BattleFeedback | null>(null);
   const [battleFeedbackQueue, setBattleFeedbackQueue] = useState<BattleFeedback[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState(battle.party[0].id);
+  const [selectedEnemyId, setSelectedEnemyId] = useState(battle.enemy.id);
   const [editorKind, setEditorKind] = useState<DataEditorKind>("weapons");
   const [editorId, setEditorId] = useState(dataSets.weapons[0]?.id ?? "");
   const [editorDraft, setEditorDraft] = useState(() =>
@@ -356,6 +361,7 @@ export function App() {
 
   const selectedMember =
     battle.party.find((member) => member.id === selectedMemberId) ?? battle.party[0];
+  const selectedEnemy = battle.enemy;
   const enemyHpRate = hpPercent(battle.enemy.hp, battle.enemy.maxHp);
   const effectiveMaxHp = selectedMember.maxHp + battle.weaponGrid.hp;
 
@@ -606,6 +612,7 @@ export function App() {
     setBattle(nextBattle);
     playResetFeedbacks();
     setSelectedMemberId(nextBattle.party[0]?.id ?? "");
+    setSelectedEnemyId(nextBattle.enemy.id);
   }
 
   function selectEditorItem(kind: DataEditorKind, id: string) {
@@ -817,13 +824,20 @@ export function App() {
             <div className="screen-corner bottom-left" />
             <div className="screen-corner bottom-right" />
 
-            <div className="enemy-overview" aria-label={t.battleScene.enemyStatus}>
+            <button
+              className={`enemy-overview ${battle.enemy.id === selectedEnemyId ? "selected" : ""}`}
+              aria-label={t.battleScene.enemyStatus}
+              onClick={() => setSelectedEnemyId(battle.enemy.id)}
+              type="button"
+            >
               <div>
                 <strong>{battle.enemy.name}</strong>
                 <small>{t.battleScene.mode} {battle.enemy.mode} / {t.battleScene.ct}</small>
               </div>
               <div className="enemy-mini-hp">
-                <span>{t.battle.hp}</span>
+                <span>
+                  {formatNumber(battle.enemy.hp)} / {formatNumber(battle.enemy.maxHp)} ({formatPercent(battle.enemy.hp, battle.enemy.maxHp)})
+                </span>
                 <i style={{ width: enemyHpRate }} />
               </div>
               <div className="charge-diamonds" aria-label={t.battle.chargeDiamond}>
@@ -834,15 +848,18 @@ export function App() {
                   />
                 ))}
               </div>
-            </div>
+            </button>
 
-            <div
+            <button
               className={`enemy-stage ${
                 battleFeedback?.targetType === "enemy" && battleFeedback.targetId === battle.enemy.id
                   ? battleFeedback.kind
                   : ""
-              }`}
+              } ${battle.enemy.id === selectedEnemyId ? "selected" : ""}`}
               key={`enemy-feedback-${battleFeedback?.targetType === "enemy" ? battleFeedback.id : "idle"}`}
+              onClick={() => setSelectedEnemyId(battle.enemy.id)}
+              type="button"
+              aria-label={battle.enemy.name}
             >
               <div className="enemy-shadow" />
               {battle.enemy.spriteUrl ? (
@@ -864,14 +881,14 @@ export function App() {
                   ))}
                 </div>
               ) : null}
-            </div>
+            </button>
 
             <details className="enemy-status-drawer">
-              <summary>{battle.enemy.name} {t.panels.statusEffects}</summary>
+              <summary>{selectedEnemy.name} {t.panels.statusEffects}</summary>
               <StatusList
-                effects={battle.enemy.statusEffects}
+                effects={selectedEnemy.statusEffects}
                 emptyText={t.battle.noStatusEffects}
-                title={`${battle.enemy.name} ${t.panels.statusEffects}`}
+                title={`${selectedEnemy.name} ${t.panels.statusEffects}`}
               />
             </details>
 
@@ -896,7 +913,8 @@ export function App() {
                   ) : null}
                   <strong>{member.name}</strong>
                   <span>
-                    {t.battle.hp}
+                    {formatNumber(member.hp)} / {formatNumber(member.maxHp + battle.weaponGrid.hp)}
+                    <small>{formatPercent(member.hp, member.maxHp + battle.weaponGrid.hp)}</small>
                     <b>CA {member.chargeBar}%</b>
                   </span>
                   <i style={{ width: hpPercent(member.hp, member.maxHp + battle.weaponGrid.hp) }} />
